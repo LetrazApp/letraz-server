@@ -54,7 +54,10 @@ INSTALLED_APPS = [
     "corsheaders",
 
     # Apps
-    'CORE.apps.CoreConfig'
+    'CORE.apps.CoreConfig',
+    'JOB.apps.JobConfig',
+    'RESUME.apps.ResumeConfig',
+    'PROFILE.apps.ProfileConfig'
 ]
 
 MIDDLEWARE = [
