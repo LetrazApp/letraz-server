@@ -25,3 +25,6 @@ class Waitlist(models.Model):
 class Country(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
     name = models.CharField(max_length=250)
+
+    def __str__(self):
+        return f'{self.name} [{self.code}]'

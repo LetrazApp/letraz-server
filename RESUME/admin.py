@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from RESUME.models import Resume, Education, Experience
+from RESUME.models import Resume, Education, Experience, ResumeSection
 
 
 # Register your models here.
@@ -8,6 +8,13 @@ from RESUME.models import Resume, Education, Experience
 class ResumeAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'job', 'base')
     list_filter = ('base',)
+
+
+# Register your models here.
+@admin.register(ResumeSection)
+class ResumeSectionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'resume', 'index', 'type')
+    list_filter = ('type',)
 
 
 @admin.register(Education)
