@@ -76,6 +76,8 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = []
 CORS_ALLOWED_ORIGINS += list(filter(None, os.environ.get('CORS_ALLOWED_ORIGINS', '').split(';')))
+CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS += list(filter(None, os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(';')))
 
 ROOT_URLCONF = 'letraz_server.urls'
 
