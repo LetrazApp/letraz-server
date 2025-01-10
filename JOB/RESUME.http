@@ -1,0 +1,2 @@
+### GET All Resume for user API
+GET https://{{url}}/api/v1/job/{{job_id}}

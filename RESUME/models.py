@@ -30,9 +30,9 @@ class Resume(models.Model):
 
 class ResumeSection(models.Model):
     class ResumeSectionType(models.TextChoices):
-        Education = 'edu', 'Education'
-        Experience = 'exp', 'Experience'
-        Others = 'oth', 'Others'
+        Education = 'edu'
+        Experience = 'exp'
+        Others = 'oth'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE)
@@ -41,6 +41,14 @@ class ResumeSection(models.Model):
 
     class Meta:
         unique_together = ('resume', 'index')
+
+    def get_context(self):
+        if self.type == ResumeSection.ResumeSectionType.Education:
+            return self.education
+        elif self.type == ResumeSection.ResumeSectionType.Experience:
+            return self.experience
+        else:
+            return None
 
     def __str__(self):
         return f'{self.type} | {self.resume.id} - {self.index}'
@@ -69,13 +77,13 @@ class Education(models.Model):
 
 class Experience(models.Model):
     class EmploymentType(models.TextChoices):
-        FULL_TIME = 'flt',
-        PART_TIME = 'prt',
-        CONTRACT = 'con',
-        INTERNSHIP = 'int',
-        FREELANCE = 'fre',
-        SELF_EMPLOYED = 'sel',
-        VOLUNTEER = 'vol',
+        FULL_TIME = 'flt'
+        PART_TIME = 'prt'
+        CONTRACT = 'con'
+        INTERNSHIP = 'int'
+        FREELANCE = 'fre'
+        SELF_EMPLOYED = 'sel'
+        VOLUNTEER = 'vol'
         TRAINEE = 'tra'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

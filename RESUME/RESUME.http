@@ -1,0 +1,18 @@
+### GET All Resume for user API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume
+
+### GET Resume by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}
+
+### GET All Education by resume id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education
+
+### GET Education by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/{{education_id}}
+
+### GET All Experience by resume id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience
+
+### GET Experience by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/{{experience_id}}
+
