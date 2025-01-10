@@ -1,6 +1,9 @@
 ### GET All Resume for user API
 GET https://{{url}}/api/v1/user/{{user_id}}/resume
 
+### GET All Resume for user API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume?base=true
+
 ### GET Resume by id API
 GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}
 
