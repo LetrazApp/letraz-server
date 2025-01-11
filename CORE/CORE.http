@@ -1,8 +1,20 @@
 ### Health Check API
-GET https://{{url}}/api/v1/health
+GET https://{{url}}/api/v1/health/
 
 ### Error Example API
-GET https://{{url}}/api/v1/error-exapmple
+GET https://{{url}}/api/v1/error-exapmple/
 
 ### Error List Example API
-GET https://{{url}}/api/v1/error-list-exapmple
+GET https://{{url}}/api/v1/error-list-exapmple/
+
+### Get All Waitlist API
+GET https://{{url}}/api/v1/waitlist/
+
+### Create Waitlist API
+POST https://{{url}}/api/v1/waitlist/
+Content-Type: application/json
+
+{
+    "email": "test@letraz.app",
+    "referrer": "website"
+}
