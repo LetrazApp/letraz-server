@@ -15,14 +15,15 @@ from dotenv import load_dotenv
 import os
 
 from letraz_server.conf.loggerConfig import LoggingConfig
+from letraz_server.contrib.settings_logger import get_settings_logger
 
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+# Settings logger - startup_errors.log
+logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log')
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-m61^t*5a2ko%+2skdm+(m*43xy099mixy50v$r1b=)$+s^r*#d'
