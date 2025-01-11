@@ -79,6 +79,12 @@ class EducationFullSerializer(serializers.ModelSerializer):
         return CountrySerializer(education.country).data if education.country else None
 
 
+class EducationUpsertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = "__all__"
+
+
 class ExperienceFullSerializer(serializers.ModelSerializer):
     country = serializers.SerializerMethodField()
     employment_type = serializers.SerializerMethodField()
@@ -98,3 +104,9 @@ class ExperienceFullSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_employment_type(experience: Experience):
         return experience.get_employment_type_display() if experience.employment_type else None
+
+
+class ExperienceUpsertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Experience
+        fields = '__all__'

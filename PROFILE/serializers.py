@@ -5,7 +5,7 @@ from .models import UserInfo
 
 
 class UserInfoSerializer(serializers.ModelSerializer):
-    country = serializers.SerializerMethodField()
+    country = CountrySerializer()
 
     class Meta:
         model = UserInfo
@@ -15,6 +15,8 @@ class UserInfoSerializer(serializers.ModelSerializer):
             'profile_text', 'created_at', 'updated_at'
         )
 
-    @staticmethod
-    def get_country(user_info: UserInfo):
-        return CountrySerializer(user_info.country).data if user_info.country else None
+
+class UserInfoUpsertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserInfo
+        fields = "__all__"
