@@ -13,7 +13,7 @@ import socket
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-
+import sentry_sdk
 from letraz_server.conf.loggerConfig import LoggingConfig
 from letraz_server.contrib.settings_logger import get_settings_logger
 
@@ -160,3 +160,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGGING = LoggingConfig(Path(
     os.environ.get('LOG_FOLDER')) if os.environ.get('LOG_FOLDER') else BASE_DIR / 'logs', log_file_initial=PROJECT_NAME
                         ).get_config()
+
+#  Sentry Setup
+SENTRY_STATUS = 'UNINITIALIZED'
+if os.environ.get('SENTRY_DSN'):
+    try:
+        sentry_sdk.init(
+            dsn=str(os.environ.get('SENTRY_DSN')).strip(),
+            # Set traces_sample_rate to 1.0 to capture 100% of transactions for tracing.
+            traces_sample_rate=1.0,
+            environment=str(os.environ.get('ENV')).strip(),
+            _experiments={
+                # Set continuous_profiling_auto_start to True to automatically start the profiler on when possible.
+                "continuous_profiling_auto_start": True,
+            },
+        )
+        SENTRY_STATUS = 'OPERATIONAL'
+    except Exception as e:
+        logger.exception('Error while connecting to Sentry: %s', e)
+        SENTRY_STATUS = 'FAILED'
