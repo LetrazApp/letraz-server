@@ -5,7 +5,7 @@ from rest_framework.response import Response
 
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
-from letraz_server.settings import PROJECT_NAME
+from letraz_server.settings import PROJECT_NAME, SENTRY_STATUS
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -13,8 +13,8 @@ logger = logging.getLogger(__module_name)
 
 @api_view(['GET'])
 def health_check(request):
-    logger.info('Health check: ok')
-    return Response({'status': 'ok'})
+    logger.info(f'HEALTH_CHECK: ok | SENTRY: {SENTRY_STATUS}')
+    return Response({'status': 'ok', 'sentry': SENTRY_STATUS})
 
 
 @api_view(['GET'])
@@ -23,7 +23,7 @@ def error_example(request):
         code=ErrorCode.INVALID, message='Example error!',
         details='Example error details!', extra='Example extra data!'
     )
-    logger.info(f'UUID -> {error_response.uuid} | Error example was called!')
+    logger.error(f'UUID -> {error_response.uuid} | Error example was called!')
     return error_response.response
 
 
@@ -35,6 +35,6 @@ def error_list_example(request):
             code=ErrorCode.INVALID, message=f'Example error - {i+1}!',
             details='Example error details!', extra='Example extra data!'
         )
-        logger.info(f'UUID -> {error_response.uuid} | Error Response List example was called!')
+        logger.error(f'UUID -> {error_response.uuid} | Error Response List example was called!')
         error_list.add_error_obj(error_response)
     return error_list.get_error_list_response()

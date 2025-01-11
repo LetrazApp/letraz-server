@@ -10,4 +10,5 @@ dependencies = [
     "djangorestframework>=3.15.2",
     "nanoid>=2.0.0",
     "python-dotenv>=1.0.1",
+    "sentry-sdk[django]>=2.19.2",
 ]
