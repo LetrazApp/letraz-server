@@ -1,0 +1,69 @@
+### Resume ###
+### GET All Resume for user API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/
+
+### GET Base Resume for user API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume?base=true
+
+### GET Resume by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/
+
+### Education ###
+### GET All Education by resume id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/
+
+### GET Education by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/{{education_id}}/
+
+### Create Education API
+POST https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/
+Content-Type: application/json
+
+{
+  "user": "user_2rFpCrEfFPZHEQMdfHQ7gC7OO65",
+  "resume_section": "e4f75672-81ff-46da-9dda-b737e850066a",
+  "institution_name": "Vidyalankar Institute of Technology",
+  "field_of_study": "Electronics",
+  "degree": "Bachelor of Engineering",
+  "country":"IND",
+  "started_from_month": null,
+  "started_from_year": null,
+  "finished_at_month": null,
+  "finished_at_year": null,
+  "current": false,
+  "description": "CSE"
+}
+
+### Delete Education API
+DELETE https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/{{education_id}}/
+
+### Experience ###
+### GET All Experience by resume id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/
+
+### GET Experience by id API
+GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/{{experience_id}}/
+
+### GET Experience by id API
+POST https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/
+Content-Type: application/json
+
+{
+    "user": "user_2rFpCrEfFPZHEQMdfHQ7gC7OO65",
+    "resume_section": "b604e2bb-200d-4ee9-b7fc-3348ec9d4d2b",
+    "company_name": "Zillow Group",
+    "job_title": "Senior Software Engineer",
+    "employment_type": "flt",
+    "city": "New York",
+    "country": null,
+    "started_from_month": null,
+    "started_from_year": null,
+    "finished_at_month": null,
+    "finished_at_year": null,
+    "current": false,
+    "description": "o Leading and mentoring a team of developers across fullstack to support and enhance NYC's leading real \r\nestate marketplace StreetEasy.\r\no Design architecture for internal management tools, digital ad products, authentication, logging and consolidated billing system to provide scalable tools for smooth and convenient real estate buying/renting experience, marketing and communication tool for real estate agents and brokers.\r\no Stack – Ruby on Rails (w/ GraphQL API), JavaScript (w/ ReactJS), CSS, MySQL, Elasticsearch"
+  }
+
+### GET Experience by id API
+DELETE https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/{{experience_id}}/
+

@@ -1,0 +1,23 @@
+### GET user by id API
+GET https://{{url}}/api/v1/user/{{user_id}}
+
+### create new user API
+POST https://{{url}}/api/v1/user/{{user_id}}/
+Content-Type: application/json
+
+{
+  "id": "user_2rFpCrEfFPZHEQMdfHQ7gC7OO63",
+  "title": "Mr",
+  "first_name": "Test User ",
+  "last_name": "Test",
+  "email": "test@letraz.app",
+  "phone": "9876543210",
+  "dob": "1947-08-15",
+  "nationality": "Martian",
+  "address": "",
+  "city": "Ganimid",
+  "postal": "000000",
+  "country": "IND",
+  "website": "https://letraz.app",
+  "profile_text": "A result driven Engineering Leader with 10+ years of experience developing softwares and web applications, building, leading and mentoring team of developers. Expertise in building AWS/Azure based applications including video subscription streaming service, fingerprint/face/palm-vein biometric implementations and e-commerce applications serving 1M+ visitors/day"
+}
