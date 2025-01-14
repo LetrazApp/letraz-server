@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 
     # Django Rest Framework
     'rest_framework',
+    # OpenAPI Documentation
+    'drf_spectacular',
     # Cors header
     "corsheaders",
 
@@ -60,6 +62,25 @@ INSTALLED_APPS = [
     'RESUME.apps.ResumeConfig',
     'PROFILE.apps.ProfileConfig'
 ]
+
+# Django Rest Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular (OpenAPI Documentation) Settings
+SPECTACULAR_SETTINGS = {
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
+    'SCHEMA_PATH_PREFIX_TRIM': True,
+    'TITLE': 'Letraz Backend Server',
+    'DESCRIPTION': 'This is the backend service repository of Letraz. Create tailored resumes for every job application effortlessly with Letraz. Our AI-powered tool helps you stand out by automatically optimizing your resume for ATS and recruiters, ensuring your skills and experience match the job\'s requirements.',
+    'VERSION': '0.1.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    'SERVERS': [
+        {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
+    ]
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

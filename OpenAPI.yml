@@ -1,0 +1,495 @@
+openapi: 3.0.3
+info:
+  title: Letraz Backend Server
+  version: 0.1.0
+  description: This is the backend service repository of Letraz. Create tailored resumes
+    for every job application effortlessly with Letraz. Our AI-powered tool helps
+    you stand out by automatically optimizing your resume for ATS and recruiters,
+    ensuring your skills and experience match the job's requirements.
+paths:
+  /error-exapmple/:
+    get:
+      operationId: error_exapmple_retrieve
+      tags:
+      - error-exapmple
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /error-list-exapmple/:
+    get:
+      operationId: error_list_exapmple_retrieve
+      tags:
+      - error-list-exapmple
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /health/:
+    get:
+      operationId: health_retrieve
+      tags:
+      - health
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /job/{job_id}/:
+    get:
+      operationId: job_retrieve
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - job
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user/:
+    get:
+      operationId: user_retrieve
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_create
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user/{user_id}/:
+    get:
+      operationId: user_retrieve_2
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_create_2
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user/{user_id}/resume/:
+    get:
+      operationId: user_resume_retrieve
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user/{user_id}/resume/{resume_id}/:
+    get:
+      operationId: user_resume_retrieve_2
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /user/{user_id}/resume/{resume_id}/education/:
+    get:
+      operationId: user_resume_education_retrieve
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_resume_education_create
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: user_resume_education_destroy
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /user/{user_id}/resume/{resume_id}/education/{education_id}/:
+    get:
+      operationId: user_resume_education_retrieve_2
+      parameters:
+      - in: path
+        name: education_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_resume_education_create_2
+      parameters:
+      - in: path
+        name: education_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: user_resume_education_destroy_2
+      parameters:
+      - in: path
+        name: education_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /user/{user_id}/resume/{resume_id}/experience/:
+    get:
+      operationId: user_resume_experience_retrieve
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_resume_experience_create
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: user_resume_experience_destroy
+      parameters:
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /user/{user_id}/resume/{resume_id}/experience/{experience_id}/:
+    get:
+      operationId: user_resume_experience_retrieve_2
+      parameters:
+      - in: path
+        name: experience_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: user_resume_experience_create_2
+      parameters:
+      - in: path
+        name: experience_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: user_resume_experience_destroy_2
+      parameters:
+      - in: path
+        name: experience_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: resume_id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: user_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - user
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /waitlist/:
+    get:
+      operationId: waitlist_retrieve
+      tags:
+      - waitlist
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: waitlist_create
+      tags:
+      - waitlist
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+servers:
+- url: http://localhost:8000/api/v1
+  description: Local Development Server
