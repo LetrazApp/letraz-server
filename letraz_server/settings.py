@@ -84,6 +84,27 @@ SPECTACULAR_SETTINGS = {
     'PREPROCESSING_HOOKS': [],
     'POSTPROCESSING_HOOKS': [],
     'ENUM_NAME_OVERRIDES': {},
+
+    # Authentication settings
+    # 'SECURITY': [
+    #     {
+    #         'bearer': {
+    #             'type': 'http',
+    #             'scheme': 'bearer',
+    #             'bearerFormat': 'JWT'
+    #         }
+    #     }
+    # ],
+    # 'SECURITY_REQUIREMENTS': [
+    #     {'bearer': []}
+    # ],
+
+    'TAGS': [
+        {'name': 'Core APIs', 'description': 'Core APIs for Letraz Backend'},
+        {'name': 'Waitlist', 'description': 'Mange waitlist, signups, retrieve waitlist and everything related to waitlist'},
+        {'name': 'User info', 'description': 'Manage user info, retrieve, create, update user info and everything related to user info'},
+        {'name': 'Job object', 'description': 'Manage job objects, retrieve job objects and everything related to job objects'},
+    ],
 }
 
 MIDDLEWARE = [

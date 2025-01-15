@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from CORE.models import Waitlist
-from CORE.serializers import WaitlistSerializer
+from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
 from letraz_server.settings import PROJECT_NAME, SENTRY_STATUS
@@ -15,13 +15,30 @@ from letraz_server.settings import PROJECT_NAME, SENTRY_STATUS
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
-
+# Health Check
+@extend_schema(
+    methods=['GET'],
+    tags=['Core APIs'],
+    auth=[],
+    responses={200: HealthCheckSerializer, 500: ErrorSerializer},
+    summary="Get server health status",
+    description="Returns the server health status. The sentry status is also included in the response"
+)
 @api_view(['GET'])
 def health_check(request):
     logger.info(f'HEALTH_CHECK: ok | SENTRY: {SENTRY_STATUS}')
     return Response({'status': 'ok', 'sentry': SENTRY_STATUS})
 
 
+# Error Example
+@extend_schema(
+    methods=['GET'],
+    tags=['Core APIs'],
+    auth=[],
+    responses={500: ErrorSerializer},
+    summary="Get sample error",
+    description="Returns a sample error response that might occur if an operation fails. Note that the HTTP status would raise an error and that's a normal behavior."
+)
 @api_view(['GET'])
 def error_example(request):
     error_response: ErrorResponse = ErrorResponse(
@@ -32,6 +49,15 @@ def error_example(request):
     return error_response.response
 
 
+# Error List Example
+@extend_schema(
+    methods=['GET'],
+    tags=['Core APIs'],
+    auth=[],
+    responses={500: ErrorListSerializer},
+    summary="Get sample error (bulk operations)",
+    description="Returns a sample error response that might occur if one or more operations fails from a bulk operation request. Note that the HTTP status would raise an error and that's a normal behavior."
+)
 @api_view(['GET'])
 def error_list_example(request):
     error_list: ErrorResponseList = ErrorResponseList('Multiple error found!')
@@ -45,16 +71,25 @@ def error_list_example(request):
     return error_list.get_error_list_response()
 
 
+# Waitlist CRUD
 @extend_schema(
     methods=['GET'],
-    responses={200: WaitlistSerializer(many=True)},
-    description="Get all waitlist entries ordered by waiting number"
+    tags=['Waitlist'],
+    auth=[],
+    responses={200: WaitlistSerializer(many=True), 500: ErrorSerializer},
+    summary="Get all waitlists",
+    description="Returns all waitlist entries ordered by waiting number. The waiting number is the order in which the user joined the waitlist."
 )
 @extend_schema(
     methods=['POST'],
+    tags=['Waitlist'],
+    auth=[],
+    summary="Add a new waitlist",
+    description="Send a POST request with the email of the user and optionally a ref string to add a new waitlist entry. Returns the newly created waitlist entry with the waiting number and created_at timestamp.",
     request=WaitlistSerializer,
     responses={
-        201: WaitlistSerializer
+        201: WaitlistSerializer,
+        400: ErrorSerializer
     }
 )
 @api_view(['GET', 'POST'])

@@ -15,16 +15,21 @@ class AutoIncrementWaitingNumberField(models.IntegerField):
 
 
 class Waitlist(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True)
-    referrer = models.CharField(max_length=50, default='website')
-    waiting_number = AutoIncrementWaitingNumberField(editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text='The unique identifier for the waitlist entry.'
+    )
+    email = models.EmailField(unique=True, help_text='The email of the user who joined the waitlist.')
+    referrer = models.CharField(max_length=50, default='website', help_text='The referrer of the user who joined the waitlist. Usually the source they have come from.')
+    waiting_number = AutoIncrementWaitingNumberField(editable=False, help_text='The waiting number of the user who joined the waitlist.')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='The timestamp at which the user joined the waitlist.')
 
 
 class Country(models.Model):
-    code = models.CharField(max_length=3, primary_key=True)
-    name = models.CharField(max_length=250)
+    code = models.CharField(max_length=3, primary_key=True, help_text='The ISO 3166-1 alpha-3 code of the country.')
+    name = models.CharField(max_length=250, help_text='The name of the country.')
 
     def __str__(self):
         return f'{self.name} [{self.code}]'
