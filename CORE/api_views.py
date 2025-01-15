@@ -1,6 +1,7 @@
 import logging
 
 from django.db.models import QuerySet
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -44,6 +45,18 @@ def error_list_example(request):
     return error_list.get_error_list_response()
 
 
+@extend_schema(
+    methods=['GET'],
+    responses={200: WaitlistSerializer(many=True)},
+    description="Get all waitlist entries ordered by waiting number"
+)
+@extend_schema(
+    methods=['POST'],
+    request=WaitlistSerializer,
+    responses={
+        201: WaitlistSerializer
+    }
+)
 @api_view(['GET', 'POST'])
 def waitlist_crud(request):
     try:

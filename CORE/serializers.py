@@ -12,3 +12,4 @@ class WaitlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Waitlist
         fields = '__all__'
+        read_only_fields = ['id', 'waiting_number', 'created_at']

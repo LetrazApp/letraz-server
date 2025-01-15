@@ -79,7 +79,11 @@ SPECTACULAR_SETTINGS = {
 
     'SERVERS': [
         {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
-    ]
+    ],
+
+    'PREPROCESSING_HOOKS': [],
+    'POSTPROCESSING_HOOKS': [],
+    'ENUM_NAME_OVERRIDES': {},
 }
 
 MIDDLEWARE = [
