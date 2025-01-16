@@ -12,6 +12,7 @@ class ResumeShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resume
         fields = ('id', 'base', 'user', 'job')
+        read_only_fields = ['id']
 
     @staticmethod
     def get_job(obj: Resume):
@@ -26,6 +27,7 @@ class ResumeFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resume
         fields = ('id', 'base', 'user', 'job', 'sections')
+        read_only_fields = ['id']
 
     @staticmethod
     def get_job(resume: Resume):
@@ -47,6 +49,7 @@ class ResumeSectionFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResumeSection
         fields = ('id', 'resume', 'index', 'type', 'data')
+        read_only_fields = ['id']
 
     @staticmethod
     def get_type(resume_section: ResumeSection):
@@ -73,6 +76,7 @@ class EducationFullSerializer(serializers.ModelSerializer):
             'finished_at_month', 'finished_at_year', 'current', 'description',
             'created_at', 'updated_at'
         )
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
     @staticmethod
     def get_country(education: Education):
@@ -96,6 +100,7 @@ class ExperienceFullSerializer(serializers.ModelSerializer):
             'city', 'country', 'started_from_month', 'started_from_year', 'finished_at_month',
             'finished_at_year', 'current', 'description', 'created_at', 'updated_at'
         )
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
     @staticmethod
     def get_country(experience: Experience):

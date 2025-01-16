@@ -15,7 +15,7 @@ paths:
         behavior.
       summary: Get sample error
       tags:
-      - Core APIs
+        - Core APIs
       responses:
         '500':
           content:
@@ -31,7 +31,7 @@ paths:
         would raise an error and that's a normal behavior.
       summary: Get sample error (bulk operations)
       tags:
-      - Core APIs
+        - Core APIs
       responses:
         '500':
           content:
@@ -46,7 +46,7 @@ paths:
         in the response
       summary: Get server health status
       tags:
-      - Core APIs
+        - Core APIs
       responses:
         '200':
           content:
@@ -67,13 +67,13 @@ paths:
         ID. If the job is not found, an error response is returned.
       summary: Get job by job ID
       parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: job_id
+          schema:
+            type: string
+          required: true
       tags:
-      - Job object
+        - Job object
       responses:
         '200':
           content:
@@ -88,26 +88,6 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: ''
   /user/:
-    get:
-      operationId: user_retrieve
-      description: Returns a user's user info by the user's id. If the user info is
-        not found, a 404 error is returned.
-      summary: Get user info
-      tags:
-      - User info
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserInfo'
-          description: ''
-        '500':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: ''
     post:
       operationId: user_create
       description: Send a POST request with the user's data to add a upsert a new
@@ -115,7 +95,7 @@ paths:
         user info does not exist, it will be created.
       summary: Add a new user info
       tags:
-      - User info
+        - User info
       requestBody:
         content:
           application/json:
@@ -148,13 +128,14 @@ paths:
         not found, a 404 error is returned.
       summary: Get user info
       parameters:
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - User info
+        - User info
       responses:
         '200':
           content:
@@ -168,384 +149,440 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
-    post:
-      operationId: user_create_2
-      description: Send a POST request with the user's data to add a upsert a new
-        user info entry. If the user info already exists, it will be updated. If the
-        user info does not exist, it will be created.
-      summary: Add a new user info
+  /user/{user_id}/resume/:
+    get:
+      operationId: user_resume_retrieve
+      description: Returns a user's resume by the resume's id. If no resume id is
+        not specified then returns all resumes. If the resume is not found, a 404
+        error is returned.
+      summary: Get one or all resume
       parameters:
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - User info
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserInfoUpsert'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserInfoUpsert'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserInfoUpsert'
-        required: true
+        - Resume object
       responses:
-        '201':
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserInfo'
+                $ref: '#/components/schemas/ResumeFull'
           description: ''
-        '400':
+        '500':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
           description: ''
-  /user/{user_id}/resume/:
-    get:
-      operationId: user_resume_retrieve
-      parameters:
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
-      responses:
-        '200':
-          description: No response body
   /user/{user_id}/resume/{resume_id}/:
     get:
       operationId: user_resume_retrieve_2
+      description: Returns a user's resume by the resume's id. If no resume id is
+        not specified then returns all resumes. If the resume is not found, a 404
+        error is returned.
+      summary: Get one or all resume
       parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Resume object
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /user/{user_id}/resume/{resume_id}/education/:
     get:
       operationId: user_resume_education_retrieve
+      description: Returns a user's education by the education's id. If no education
+        id is not specified then returns all educations for the resume as specified
+        in the resume id. Send the id of the base resume to get the user's all base
+        educations. If the education is not found, a 404 error is returned.
+      summary: Get one or all educations
       parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: query
+          name: education_id
+          schema:
+            type: string
+          description: Education ID
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Education object
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EducationFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
     post:
       operationId: user_resume_education_create
+      description: Adds a new education to the user's resume as specified in the resume
+        id. If a base resume id is provided, the education is added to the base resume.
+      summary: Add a new education
       parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Education object
       responses:
         '200':
-          description: No response body
-    delete:
-      operationId: user_resume_education_destroy
-      parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
-      responses:
-        '204':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EducationFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /user/{user_id}/resume/{resume_id}/education/{education_id}/:
     get:
       operationId: user_resume_education_retrieve_2
+      description: Returns a user's education by the education's id. If no education
+        id is not specified then returns all educations for the resume as specified
+        in the resume id. Send the id of the base resume to get the user's all base
+        educations. If the education is not found, a 404 error is returned.
+      summary: Get one or all educations
       parameters:
-      - in: path
-        name: education_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: education_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: education_id
+          schema:
+            type: string
+          description: Education ID
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Education object
       responses:
         '200':
-          description: No response body
-    post:
-      operationId: user_resume_education_create_2
-      parameters:
-      - in: path
-        name: education_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
-      responses:
-        '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EducationFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
     delete:
       operationId: user_resume_education_destroy_2
+      description: Deletes an education from the user's resume as specified in the
+        resume id.
+      summary: Delete an education
       parameters:
-      - in: path
-        name: education_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: education_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: education_id
+          schema:
+            type: string
+          description: Education ID
+          required: true
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Education object
       responses:
         '204':
           description: No response body
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /user/{user_id}/resume/{resume_id}/experience/:
     get:
       operationId: user_resume_experience_retrieve
+      description: Returns a user's experience by the experience's id. If no experience
+        id is not specified then returns all experience for the resume as specified
+        in the resume id. Send the id of the base resume to get the user's all base
+        experience. If the experience is not found, a 404 error is returned.
+      summary: Get one or all experiences
       parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: query
+          name: experience_id
+          schema:
+            type: string
+          description: Experience ID
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Experience object
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
     post:
       operationId: user_resume_experience_create
+      description: Adds a new experience to the user's resume as specified in the
+        resume id. If a base resume id is provided, the experience is added to the
+        base resume.
+      summary: Add a new experience
       parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Experience object
       responses:
         '200':
-          description: No response body
-    delete:
-      operationId: user_resume_experience_destroy
-      parameters:
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
-      responses:
-        '204':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /user/{user_id}/resume/{resume_id}/experience/{experience_id}/:
     get:
       operationId: user_resume_experience_retrieve_2
+      description: Returns a user's experience by the experience's id. If no experience
+        id is not specified then returns all experience for the resume as specified
+        in the resume id. Send the id of the base resume to get the user's all base
+        experience. If the experience is not found, a 404 error is returned.
+      summary: Get one or all experiences
       parameters:
-      - in: path
-        name: experience_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: experience_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: experience_id
+          schema:
+            type: string
+          description: Experience ID
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Experience object
       responses:
         '200':
-          description: No response body
-    post:
-      operationId: user_resume_experience_create_2
-      parameters:
-      - in: path
-        name: experience_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
-      responses:
-        '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceFull'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
     delete:
       operationId: user_resume_experience_destroy_2
+      description: Deletes an experience from the user's resume as specified in the
+        resume id.
+      summary: Delete an experience
       parameters:
-      - in: path
-        name: experience_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: resume_id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: user_id
-        schema:
-          type: string
-        required: true
+        - in: path
+          name: experience_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: experience_id
+          schema:
+            type: string
+          description: Experience ID
+          required: true
+        - in: path
+          name: resume_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: resume_id
+          schema:
+            type: string
+          description: Resume ID
+          required: true
+        - in: path
+          name: user_id
+          schema:
+            type: string
+          description: User ID
+          required: true
       tags:
-      - user
-      security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+        - Experience object
       responses:
         '204':
           description: No response body
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ''
   /waitlist/:
     get:
       operationId: waitlist_list
@@ -553,7 +590,7 @@ paths:
         number is the order in which the user joined the waitlist.
       summary: Get all waitlists
       tags:
-      - Waitlist
+        - Waitlist
       responses:
         '200':
           content:
@@ -576,7 +613,7 @@ paths:
         entry with the waiting number and created_at timestamp.
       summary: Add a new waitlist
       tags:
-      - Waitlist
+        - Waitlist
       requestBody:
         content:
           application/json:
@@ -616,8 +653,96 @@ components:
           description: The name of the country.
           maxLength: 250
       required:
-      - code
-      - name
+        - code
+        - name
+    EducationFull:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The unique identifier for the education entry.
+        user:
+          type: string
+          description: The user who the education entry belongs to.
+        resume_section:
+          type: string
+          format: uuid
+          description: The resume section the education entry belongs to.
+        institution_name:
+          type: string
+          description: The name of the institution the user studied at.
+          maxLength: 250
+        field_of_study:
+          type: string
+          description: The field of study the user studied.
+          maxLength: 250
+        degree:
+          type: string
+          nullable: true
+          description: The degree the user obtained. (optional)
+          maxLength: 250
+        country:
+          type: string
+          readOnly: true
+        started_from_month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The month the user started studying. (optional)
+        started_from_year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The year the user started studying. (optional)
+        finished_at_month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The month the user finished studying. (optional)
+        finished_at_year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The year the user finished studying. (optional)
+        current:
+          type: boolean
+          description: 'Whether the user is currently studying. default: False'
+        description:
+          type: string
+          nullable: true
+          description: The description of the education entry. User can provide any
+            kind of description for that user. Usually in HTML format to support rich
+            text. (optional)
+          maxLength: 3000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The date and time the education entry was created.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The date and time the education entry was last updated.
+      required:
+        - country
+        - created_at
+        - field_of_study
+        - id
+        - institution_name
+        - resume_section
+        - updated_at
+        - user
     Error:
       type: object
       properties:
@@ -644,11 +769,11 @@ components:
             more detail. This is usually not displayed to the user and might include
             stacktrace and sensitive information.
       required:
-      - code
-      - details
-      - extra
-      - message
-      - uuid
+        - code
+        - details
+        - extra
+        - message
+        - uuid
     ErrorList:
       type: object
       properties:
@@ -665,9 +790,101 @@ components:
           description: The error message that is human readable and can be used to
             understand the error. Usually fit to be displayed to the user.
       required:
-      - code
-      - errors
-      - message
+        - code
+        - errors
+        - message
+    ExperienceFull:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The unique identifier for the experience entry.
+        user:
+          type: string
+          description: The user who the experience entry belongs to.
+        resume_section:
+          type: string
+          format: uuid
+          description: The unique identifier for the resume section entry.
+        company_name:
+          type: string
+          description: The name of the company the user worked at.
+          maxLength: 250
+        job_title:
+          type: string
+          description: The title of the job the user had.
+          maxLength: 250
+        employment_type:
+          type: string
+          readOnly: true
+        city:
+          type: string
+          nullable: true
+          description: The city the company is located in. (optional)
+          maxLength: 50
+        country:
+          type: string
+          readOnly: true
+        started_from_month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The month the user started working.
+        started_from_year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The year the user started working.
+        finished_at_month:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The month the user finished working. (optional)
+        finished_at_year:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          description: The year the user finished working. (optional)
+        current:
+          type: boolean
+          description: 'Whether the user is currently working. default: False'
+        description:
+          type: string
+          nullable: true
+          description: The description of the experience entry. User can provide any
+            kind of description for that user. Usually in HTML format to support rich
+            text. (optional)
+          maxLength: 3000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The date and time the experience entry was created.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: The date and time the experience entry was last updated.
+      required:
+        - company_name
+        - country
+        - created_at
+        - employment_type
+        - id
+        - job_title
+        - resume_section
+        - updated_at
+        - user
     HealthCheck:
       type: object
       properties:
@@ -682,7 +899,7 @@ components:
             is not initialized, possibly due to absense of environment variables,
             which is expected or misconfigured initialization.
       required:
-      - status
+        - status
     JobFull:
       type: object
       properties:
@@ -749,17 +966,42 @@ components:
           description: An array representation of the benefits the candidate would
             get as mentioned in the job posting. (optional)
       required:
-      - company_name
-      - id
-      - title
+        - company_name
+        - id
+        - title
+    ResumeFull:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          description: The unique identifier for the resume entry.
+        base:
+          type: boolean
+          description: 'Whether the resume is a base resume for the user. One user
+            can '
+        user:
+          type: string
+          readOnly: true
+        job:
+          type: string
+          readOnly: true
+        sections:
+          type: string
+          readOnly: true
+      required:
+        - id
+        - job
+        - sections
+        - user
     UserInfo:
       type: object
       properties:
         id:
           type: string
+          readOnly: true
           description: The unique identifier for the user. Typically provided from
             the client side while creating the user.
-          maxLength: 32
         title:
           type: string
           nullable: true
@@ -834,12 +1076,12 @@ components:
           readOnly: true
           description: The timestamp at which the user was last updated.
       required:
-      - country
-      - created_at
-      - email
-      - first_name
-      - id
-      - updated_at
+        - country
+        - created_at
+        - email
+        - first_name
+        - id
+        - updated_at
     UserInfoUpsert:
       type: object
       properties:
@@ -924,11 +1166,11 @@ components:
           description: The country the user lives in. (optional)
           nullable: true
       required:
-      - created_at
-      - email
-      - first_name
-      - id
-      - updated_at
+        - created_at
+        - email
+        - first_name
+        - id
+        - updated_at
     Waitlist:
       type: object
       properties:
@@ -957,30 +1199,31 @@ components:
           readOnly: true
           description: The timestamp at which the user joined the waitlist.
       required:
-      - created_at
-      - email
-      - id
-      - waiting_number
-  securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: sessionid
+        - created_at
+        - email
+        - id
+        - waiting_number
 servers:
-- url: http://localhost:8000/api/v1
-  description: Local Development Server
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
 tags:
-- name: Core APIs
-  description: Core APIs for Letraz Backend
-- name: Waitlist
-  description: Mange waitlist, signups, retrieve waitlist and everything related to
-    waitlist
-- name: User info
-  description: Manage user info, retrieve, create, update user info and everything
-    related to user info
-- name: Job object
-  description: Manage job objects, retrieve job objects and everything related to
-    job objects
+  - name: Core APIs
+    description: Core APIs for Letraz Backend
+  - name: Waitlist
+    description: Mange waitlist, signups, retrieve waitlist and everything related to
+      waitlist
+  - name: User info
+    description: Manage user info, retrieve, create, update user info and everything
+      related to user info
+  - name: Job object
+    description: Manage job objects, retrieve job objects and everything related to
+      job objects
+  - name: Resume object
+    description: Manage resume objects, retrieve resume objects and everything related
+      to resume objects
+  - name: Education object
+    description: Manage education objects, retrieve education objects and everything
+      related to education objects
+  - name: Experience object
+    description: Manage experience objects, retrieve experience objects and everything
+      related to experience objects

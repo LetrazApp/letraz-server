@@ -1,9 +1,12 @@
 import logging
 
 from django.db.models import QuerySet
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+from CORE.serializers import ErrorSerializer
 from RESUME.models import Resume, Education, Experience
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer
@@ -15,6 +18,33 @@ __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
 
+# Resume CRUD operations
+@extend_schema(
+    methods=['GET'],
+    tags=['Resume object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=False,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        200: ResumeFullSerializer or ResumeFullSerializer(many=True),
+        500: ErrorSerializer
+    },
+    summary="Get one or all resume",
+    description="Returns a user's resume by the resume's id. If no resume id is not specified then returns all resumes. If the resume is not found, a 404 error is returned."
+)
 @api_view(['GET'])
 def resume_crud(request, user_id: str, resume_id: str | None = None):
     if request.method == 'GET':
@@ -42,6 +72,97 @@ def resume_crud(request, user_id: str, resume_id: str | None = None):
             )
 
 
+# Education CRUD operations
+@extend_schema(
+    methods=['GET'],
+    tags=['Education object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='education_id',
+            description='Education ID',
+            required=False,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        200: EducationFullSerializer or EducationFullSerializer(many=True),
+        500: ErrorSerializer
+    },
+    summary="Get one or all educations",
+    description="Returns a user's education by the education's id. If no education id is not specified then returns all educations for the resume as specified in the resume id. Send the id of the base resume to get the user's all base educations. If the education is not found, a 404 error is returned."
+)
+@extend_schema(
+    methods=['POST'],
+    tags=['Education object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        200: EducationFullSerializer,
+        500: ErrorSerializer
+    },
+    summary="Add a new education",
+    description="Adds a new education to the user's resume as specified in the resume id. If a base resume id is provided, the education is added to the base resume."
+)
+@extend_schema(
+    methods=['DELETE'],
+    tags=['Education object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='education_id',
+            description='Education ID',
+            required=True,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        204: None,
+        500: ErrorSerializer
+    },
+    summary="Delete an education",
+    description="Deletes an education from the user's resume as specified in the resume id."
+)
 @api_view(['GET', 'POST', 'DELETE'])
 def education_crud(request, user_id: str, resume_id: str, education_id: str | None = None):
     try:
@@ -90,6 +211,97 @@ def education_crud(request, user_id: str, resume_id: str, education_id: str | No
         return error_response.response
 
 
+# Experience CRUD operations
+@extend_schema(
+    methods=['GET'],
+    tags=['Experience object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='experience_id',
+            description='Experience ID',
+            required=False,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        200: ExperienceFullSerializer or ExperienceFullSerializer(many=True),
+        500: ErrorSerializer
+    },
+    summary="Get one or all experiences",
+    description="Returns a user's experience by the experience's id. If no experience id is not specified then returns all experience for the resume as specified in the resume id. Send the id of the base resume to get the user's all base experience. If the experience is not found, a 404 error is returned."
+)
+@extend_schema(
+    methods=['POST'],
+    tags=['Experience object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        200: ExperienceFullSerializer,
+        500: ErrorSerializer
+    },
+    summary="Add a new experience",
+    description="Adds a new experience to the user's resume as specified in the resume id. If a base resume id is provided, the experience is added to the base resume."
+)
+@extend_schema(
+    methods=['DELETE'],
+    tags=['Experience object'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID',
+            required=True,
+            type=str
+        ),
+        OpenApiParameter(
+            name='experience_id',
+            description='Experience ID',
+            required=True,
+            type=str
+        )
+    ],
+    auth=[],
+    responses={
+        204: None,
+        500: ErrorSerializer
+    },
+    summary="Delete an experience",
+    description="Deletes an experience from the user's resume as specified in the resume id."
+)
 @api_view(['GET', 'POST', 'DELETE'])
 def experience_crud(request, user_id: str, resume_id: str, experience_id: str | None = None):
     try:

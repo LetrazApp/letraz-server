@@ -104,6 +104,9 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Waitlist', 'description': 'Mange waitlist, signups, retrieve waitlist and everything related to waitlist'},
         {'name': 'User info', 'description': 'Manage user info, retrieve, create, update user info and everything related to user info'},
         {'name': 'Job object', 'description': 'Manage job objects, retrieve job objects and everything related to job objects'},
+        {'name': 'Resume object', 'description': 'Manage resume objects, retrieve resume objects and everything related to resume objects'},
+        {'name': 'Education object', 'description': 'Manage education objects, retrieve education objects and everything related to education objects'},
+        {'name': 'Experience object', 'description': 'Manage experience objects, retrieve experience objects and everything related to experience objects'},
     ],
 }
 

@@ -1,5 +1,5 @@
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -13,6 +13,15 @@ from .serializers import UserInfoSerializer, UserInfoUpsertSerializer
 @extend_schema(
     methods=['GET'],
     tags=['User info'],
+    parameters=[
+        OpenApiParameter(
+            name='user_id',
+            location=OpenApiParameter.PATH,
+            description='User ID',
+            required=True,
+            type=str
+        )
+    ],
     auth=[],
     responses={200: UserInfoSerializer, 500: ErrorSerializer},
     summary="Get user info",
@@ -22,6 +31,7 @@ from .serializers import UserInfoSerializer, UserInfoUpsertSerializer
     methods=['POST'],
     tags=['User info'],
     auth=[],
+    parameters=[],
     summary="Add a new user info",
     description="Send a POST request with the user's data to add a upsert a new user info entry. If the user info already exists, it will be updated. If the user info does not exist, it will be created.",
     request=UserInfoUpsertSerializer,

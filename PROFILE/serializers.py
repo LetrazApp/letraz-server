@@ -14,6 +14,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
             'nationality', 'address', 'city', 'postal', 'country', 'website',
             'profile_text', 'created_at', 'updated_at'
         )
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class UserInfoUpsertSerializer(serializers.ModelSerializer):
