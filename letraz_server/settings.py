@@ -51,6 +51,8 @@ INSTALLED_APPS = [
 
     # Django Rest Framework
     'rest_framework',
+    # OpenAPI Documentation
+    'drf_spectacular',
     # Cors header
     "corsheaders",
 
@@ -60,6 +62,53 @@ INSTALLED_APPS = [
     'RESUME.apps.ResumeConfig',
     'PROFILE.apps.ProfileConfig'
 ]
+
+# Django Rest Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular (OpenAPI Documentation) Settings
+SPECTACULAR_SETTINGS = {
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
+    'SCHEMA_PATH_PREFIX_TRIM': True,
+    'TITLE': 'Letraz Backend Server',
+    'DESCRIPTION': 'This is the backend service repository of Letraz. Create tailored resumes for every job application effortlessly with Letraz. Our AI-powered tool helps you stand out by automatically optimizing your resume for ATS and recruiters, ensuring your skills and experience match the job\'s requirements.',
+    'VERSION': '0.1.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    'SERVERS': [
+        {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
+    ],
+
+    'PREPROCESSING_HOOKS': [],
+    'POSTPROCESSING_HOOKS': [],
+    'ENUM_NAME_OVERRIDES': {},
+
+    # Authentication settings
+    # 'SECURITY': [
+    #     {
+    #         'bearer': {
+    #             'type': 'http',
+    #             'scheme': 'bearer',
+    #             'bearerFormat': 'JWT'
+    #         }
+    #     }
+    # ],
+    # 'SECURITY_REQUIREMENTS': [
+    #     {'bearer': []}
+    # ],
+
+    'TAGS': [
+        {'name': 'Core APIs', 'description': 'Core APIs for Letraz Backend'},
+        {'name': 'Waitlist', 'description': 'Mange waitlist, signups, retrieve waitlist and everything related to waitlist'},
+        {'name': 'User info', 'description': 'Manage user info, retrieve, create, update user info and everything related to user info'},
+        {'name': 'Job object', 'description': 'Manage job objects, retrieve job objects and everything related to job objects'},
+        {'name': 'Resume object', 'description': 'Manage resume objects, retrieve resume objects and everything related to resume objects'},
+        {'name': 'Education object', 'description': 'Manage education objects, retrieve education objects and everything related to education objects'},
+        {'name': 'Experience object', 'description': 'Manage experience objects, retrieve experience objects and everything related to experience objects'},
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
