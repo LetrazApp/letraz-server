@@ -2,10 +2,10 @@
 GET https://{{url}}/api/v1/health/
 
 ### Error Example API
-GET https://{{url}}/api/v1/error-exapmple/
+GET https://{{url}}/api/v1/error-example/
 
 ### Error List Example API
-GET https://{{url}}/api/v1/error-list-exapmple/
+GET https://{{url}}/api/v1/error-list-example/
 
 ### Get All Waitlist API
 GET https://{{url}}/api/v1/waitlist/

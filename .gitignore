@@ -180,3 +180,4 @@ __pycache__
 *.egg-info
 *.env.json
 /staticfiles
+openapi.yml
