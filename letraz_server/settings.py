@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     'PROFILE.apps.ProfileConfig'
 ]
 
+AUTH_USER_MODEL = 'PROFILE.User'
+
 # Django Rest Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',

@@ -1,8 +1,7 @@
 import uuid
 from django.db import models
-from nanoid import generate
 from CORE.models import Country
-from PROFILE.models import UserInfo
+from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
 
@@ -23,7 +22,7 @@ class Resume(models.Model):
         editable=False,
         help_text='The unique identifier for the resume entry.'
     )
-    user = models.ForeignKey(UserInfo, on_delete=models.CASCADE, help_text='The user who the resume belongs to.')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the resume belongs to.')
     job = models.ForeignKey(Job, on_delete=models.CASCADE, blank=True, null=True, help_text='The job the resume is for. (optional in case it\'s a base resume for the user.)')
     base = models.BooleanField(default=False, help_text='Whether the resume is a base resume for the user. One user can ')
 
@@ -67,7 +66,7 @@ class ResumeSection(models.Model):
 
 class Education(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, help_text='The unique identifier for the education entry.')
-    user = models.ForeignKey(UserInfo, on_delete=models.CASCADE, help_text='The user who the education entry belongs to.')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the education entry belongs to.')
     resume_section = models.OneToOneField(ResumeSection, on_delete=models.CASCADE, help_text='The resume section the education entry belongs to.')
     institution_name = models.CharField(max_length=250, help_text='The name of the institution the user studied at.')
     field_of_study = models.CharField(max_length=250, help_text='The field of study the user studied.')
@@ -98,7 +97,7 @@ class Experience(models.Model):
         TRAINEE = 'tra'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, help_text='The unique identifier for the experience entry.')
-    user = models.ForeignKey(UserInfo, on_delete=models.CASCADE, help_text='The user who the experience entry belongs to.')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the experience entry belongs to.')
     resume_section = models.OneToOneField(ResumeSection, on_delete=models.CASCADE)
     company_name = models.CharField(max_length=250, help_text='The name of the company the user worked at.')
     job_title = models.CharField(max_length=250, help_text='The title of the job the user had.')

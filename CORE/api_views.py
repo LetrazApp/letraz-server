@@ -15,6 +15,7 @@ from letraz_server.settings import PROJECT_NAME, SENTRY_STATUS
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
+
 # Health Check
 @extend_schema(
     methods=['GET'],

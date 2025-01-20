@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from CORE.serializers import CountrySerializer
 from JOB.serializers import JobShortSerializer, JobFullSerializer
-from PROFILE.serializers import UserInfoSerializer
+from PROFILE.serializers import UserSerializer
 from RESUME.models import Resume, ResumeSection, Education, Experience
 
 
@@ -35,7 +35,7 @@ class ResumeFullSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_user(resume: Resume):
-        return UserInfoSerializer(resume.user).data
+        return UserSerializer(resume.user).data
 
     @staticmethod
     def get_sections(resume: Resume):
