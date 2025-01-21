@@ -3,7 +3,7 @@ from rest_framework.response import Response
 
 
 class ErrorResponse:
-    def __init__(self, code, message, details=None, extra=None):
+    def __init__(self, code, message, details=None, extra=None, status_code=400):
         self.uuid = str(uuid.uuid4())
         self.code = code
         self.message = message
@@ -17,7 +17,7 @@ class ErrorResponse:
                 'details': self.details,
                 'extra': self.extra
             }
-        }, 400)
+        }, status_code)
 
     def to_dict(self):
         return self.response.data
