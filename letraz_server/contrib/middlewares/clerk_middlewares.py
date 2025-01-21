@@ -26,25 +26,20 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
         )
 
     def authenticate(self, request):
-        start_time = datetime.datetime.now()
         authentication_header = request.headers.get('Authorization')
-        logger.debug(authentication_header)
         if not authentication_header:
             return None, None
         try:
             if not authentication_header.split(' ')[0] == 'Bearer':
                 raise AuthenticationFailed('Token must be a bearer token!')
             token = authentication_header.split(' ')[1]
-            # logger.debug(request_state)
         except IndexError:
             raise AuthenticationFailed('Bearer token not provided!')
         except Exception as e:
             logger.exception(e)
             raise AuthenticationFailed('Invalid bearer token provided!')
         user = self.decode_jwt(token)
-        end_time = datetime.datetime.now()
         logger.debug('Authenticated user: ', user)
-        logger.debug('Time taken for authentication: ', end_time-start_time, 'ms')
         return user, None
 
     def decode_jwt(self, token):
@@ -57,16 +52,14 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                 algorithms=["RS256"],
                 options={"verify_signature": True}
             )
-            logger.debug('decode_jwt Payload: ', json.dumps(payload))
+            logger.debug(f'decode_jwt Payload: {json.dumps(payload)}')
             user_id = payload.get('sub') if payload else None
-            logger.debug('decode_jwt user_id: ', user_id)
             if user_id:
                 user, created = User.objects.get_or_create(id=user_id)
 
-                logger.debug('decode_jwt user, created: ', user, ' | ', created)
+                logger.debug(f'decode_jwt user, created: {user} | {created}')
                 if created:
                     found, info = self.clerk.fetch_user_info(user.id)
-                    logger.debug('decode_jwt found, info: ', found, ' | ', info)
                     if not user:
                         return None
                     else:
@@ -76,7 +69,6 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                             user.last_name = info["last_name"]
                             user.last_login = info["last_login"]
                         user.save()
-                logger.debug('decode_jwt user: ', user)
                 return user
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed("Token has expired!")

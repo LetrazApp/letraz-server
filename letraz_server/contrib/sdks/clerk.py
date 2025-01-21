@@ -22,14 +22,14 @@ class ClerkSDK:
 
     def fetch_user_info(self, user_id: str):
 
-        logger.debug('Data For user id: ', user_id)
+        logger.debug(f'Data For user id: {user_id}')
         if not user_id:
             raise AuthenticationFailed('Invalid user!')
         response = requests.get(
             f"{self.API_URL}/users/{user_id}",
             headers={'Authorization': f'Bearer {self.SECRET_KEY}'}
         )
-        logger.debug('User: ', json.dumps(response.json()))
+        logger.debug(f'User:  {json.dumps(response.json())}')
         if response.status_code == 200:
             data = response.json()
             return True, {
@@ -54,7 +54,7 @@ class ClerkSDK:
             response = requests.get(f'{self.FRONTEND_API_URL}/.well-known/jwks.json')
             if response.status_code == 200:
                 jwks_data = response.json()
-                logger.debug('JWKS Keys: ', jwks_data)  ######
+                logger.debug(f'JWKS Keys:  {jwks_data}')
                 cache.set(self.CACHE_KEY, jwks_data)
             else:
                 raise AuthenticationFailed('Failed to fetch JWKS!')
