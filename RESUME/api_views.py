@@ -48,7 +48,6 @@ logger = logging.getLogger(__module_name)
 @api_view(['GET'])
 def resume_crud(request, user_id: str, resume_id: str | None = None):
     if request.method == 'GET':
-        print(request.query_params)
         # If resume id is not provided send all resumes for the user
         if request.query_params.get('base') and request.query_params.get('base') == 'true':
             base_resume_qs: QuerySet[Resume] = Resume.objects.filter(user__id=user_id, base=True)

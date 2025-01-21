@@ -16,6 +16,7 @@ import os
 import sentry_sdk
 from letraz_server.conf.loggerConfig import LoggingConfig
 from letraz_server.contrib.settings_logger import get_settings_logger
+from django.core.management.utils import get_random_secret_key
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m61^t*5a2ko%+2skdm+(m*43xy099mixy50v$r1b=)$+s^r*#d'
+SECRET_KEY = str(os.environ.get('SECRET')).strip() if os.environ.get('SECRET') else get_random_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(str(os.environ.get('ENV')).strip() == 'DEV')
@@ -36,7 +37,7 @@ try:
     ALLOWED_HOSTS.append(socket.gethostbyname(socket.gethostname()))
     ALLOWED_HOSTS.append(socket.gethostbyname(socket.getfqdn()))
 except Exception as ex:
-    print('Encountered error while adding host\'s IP address/domain from socket: \n', ex)
+    logger.exception('Encountered error while adding host\'s IP address/domain from socket: \n', ex)
 
 ALLOWED_HOSTS += list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(';')))
 
@@ -63,8 +64,21 @@ INSTALLED_APPS = [
     'PROFILE.apps.ProfileConfig'
 ]
 
+AUTH_USER_MODEL = 'PROFILE.User'
+
+# Clerk Configuration
+CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
+CLERK_FRONTEND_API_URL = os.environ.get('CLERK_FRONTEND_API_URL', '')
+if not CLERK_SECRET_KEY or not CLERK_FRONTEND_API_URL:
+    raise ConnectionError('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
+
 # Django Rest Framework Settings
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "letraz_server.contrib.middlewares.clerk_middlewares.ClerkAuthenticationMiddleware",
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
