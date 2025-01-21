@@ -1,12 +1,11 @@
 import logging
-
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
 from CORE.serializers import ErrorSerializer
+from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer
@@ -46,19 +45,18 @@ logger = logging.getLogger(__module_name)
     description="Returns a user's resume by the resume's id. If no resume id is not specified then returns all resumes. If the resume is not found, a 404 error is returned."
 )
 @api_view(['GET'])
-def resume_crud(request, user_id: str, resume_id: str | None = None):
+def resume_crud(request, resume_id: str | None = None):
     if request.method == 'GET':
+        authenticated_user: User = request.user
         # If resume id is not provided send all resumes for the user
         if request.query_params.get('base') and request.query_params.get('base') == 'true':
-            base_resume_qs: QuerySet[Resume] = Resume.objects.filter(user__id=user_id, base=True)
+            base_resume_qs: QuerySet[Resume] = authenticated_user.resume_set.filter(base=True)
             if base_resume_qs.exists():
                 return Response(ResumeFullSerializer(base_resume_qs.first()).data)
             else:
                 return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Base Resume not found!').response
         elif resume_id:
-            resume_by_user_and_resume_id_qs: QuerySet[Resume] = Resume.objects.filter(
-                user__id=str(user_id), id=resume_id
-            )
+            resume_by_user_and_resume_id_qs: QuerySet[Resume] = authenticated_user.resume_set.filter(id=resume_id)
             if resume_by_user_and_resume_id_qs.exists():
                 return Response(ResumeFullSerializer(resume_by_user_and_resume_id_qs.first()).data)
             else:
@@ -67,7 +65,7 @@ def resume_crud(request, user_id: str, resume_id: str | None = None):
                 ).response
         else:
             return Response(
-                ResumeShortSerializer(Resume.objects.filter(user__id=user_id), many=True).data
+                ResumeShortSerializer(authenticated_user.resume_set.all(), many=True).data
             )
 
 

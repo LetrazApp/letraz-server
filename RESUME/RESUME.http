@@ -1,12 +1,15 @@
 ### Resume ###
 ### GET All Resume for user API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/
+GET https://{{url}}/api/v1/resume/
+Authorization: Bearer {{token}}
 
 ### GET Base Resume for user API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume?base=true
+GET https://{{url}}/api/v1/resume?base=true
+Authorization: Bearer {{token}}
 
 ### GET Resume by id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/
+Authorization: Bearer {{token}}
 
 ### Education ###
 ### GET All Education by resume id API
