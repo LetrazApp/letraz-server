@@ -3,7 +3,8 @@ import logging
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from CORE.models import Waitlist
@@ -26,6 +27,7 @@ logger = logging.getLogger(__module_name)
     description="Returns the server health status. The sentry status is also included in the response"
 )
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def health_check(request):
     logger.info(f'HEALTH_CHECK: ok | SENTRY: {SENTRY_STATUS}')
     return Response({'status': 'ok', 'sentry': SENTRY_STATUS})
@@ -41,6 +43,7 @@ def health_check(request):
     description="Returns a sample error response that might occur if an operation fails. Note that the HTTP status would raise an error and that's a normal behavior."
 )
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def error_example(request):
     error_response: ErrorResponse = ErrorResponse(
         code=ErrorCode.INVALID, message='Example error!',
@@ -60,6 +63,7 @@ def error_example(request):
     description="Returns a sample error response that might occur if one or more operations fails from a bulk operation request. Note that the HTTP status would raise an error and that's a normal behavior."
 )
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def error_list_example(request):
     error_list: ErrorResponseList = ErrorResponseList('Multiple error found!')
     for i in range(1, 5):
@@ -94,6 +98,7 @@ def error_list_example(request):
     }
 )
 @api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
 def waitlist_crud(request):
     try:
         if request.method == 'GET':

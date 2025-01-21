@@ -1,6 +1,7 @@
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from CORE.serializers import ErrorSerializer
@@ -18,6 +19,7 @@ from .serializers import JobFullSerializer
     description="Returns the full job object as saved in the database by the job ID. If the job is not found, an error response is returned."
 )
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def job_crud(request, job_id: str):
     if request.method == 'GET':
         job_by_job_and_user_id_qs: QuerySet[Job] = Job.objects.filter(id=job_id)
