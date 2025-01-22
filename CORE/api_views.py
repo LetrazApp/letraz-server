@@ -11,7 +11,8 @@ from CORE.models import Waitlist
 from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
-from letraz_server.settings import PROJECT_NAME, SENTRY_STATUS
+from letraz_server import settings
+from letraz_server.settings import PROJECT_NAME
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -29,8 +30,11 @@ logger = logging.getLogger(__module_name)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    logger.info(f'HEALTH_CHECK: ok | SENTRY: {SENTRY_STATUS}')
-    return Response({'status': 'ok', 'sentry': SENTRY_STATUS})
+    response = {'status': 'OPERATIONAL', 'details': {'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS}}
+    if not settings.CLERK_STATUS == 'OPERATIONAL':
+        response = {'status': 'DEGRADED', 'details': {'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS}}
+    logger.info(f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}>')
+    return Response(response)
 
 
 # Error Example

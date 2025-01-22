@@ -67,10 +67,12 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = 'PROFILE.User'
 
 # Clerk Configuration
+CLERK_STATUS = 'OPERATIONAL'
 CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
 CLERK_FRONTEND_API_URL = os.environ.get('CLERK_FRONTEND_API_URL', '')
 if not CLERK_SECRET_KEY or not CLERK_FRONTEND_API_URL:
-    raise ConnectionError('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
+    CLERK_STATUS = 'DOWN'
+    logger.error('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
 
 # Django Rest Framework Settings
 REST_FRAMEWORK = {

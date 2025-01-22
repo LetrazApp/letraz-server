@@ -14,4 +14,6 @@ dependencies = [
     "pytz>=2024.2",
     "requests>=2.32.3",
     "sentry-sdk[django]>=2.19.2",
+    "djangorestframework-jwt>=1.11.0",
+    "cryptography>=36.0.1",
 ]
