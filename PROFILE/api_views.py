@@ -1,13 +1,16 @@
-from django.db.models import QuerySet
+import logging
+
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
 from CORE.serializers import ErrorSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
-from .models import User
+from letraz_server.settings import PROJECT_NAME
 from .serializers import UserSerializer, UserUpsertSerializer
+
+__module_name = f'{PROJECT_NAME}.' + __name__
+logger = logging.getLogger(__module_name)
 
 
 @extend_schema(
@@ -40,28 +43,17 @@ from .serializers import UserSerializer, UserUpsertSerializer
         400: ErrorSerializer
     }
 )
-@api_view(['GET', 'POST'])
-def user_info_crud(request, user_id: str | None = None):
+@api_view(['GET'])
+def user_info_crud(request):
     if request.method == 'GET':
-        user_info_by_user_id_qs: QuerySet[User] = User.objects.filter(id=user_id)
-        if user_info_by_user_id_qs.exists():
-            return Response(UserSerializer(user_info_by_user_id_qs.first()).data)
-        else:
-            return ErrorResponse(
-                code=ErrorCode.NOT_FOUND, message='User Profile not found!', details={'user': user_id}
-            ).response
-    if request.method == 'POST':
-        user_info_ser: UserUpsertSerializer = UserUpsertSerializer(data=request.data)
-        if User.objects.filter(id=request.data.get('id')).exists():
-            return ErrorResponse(
-                code=ErrorCode.ALREADY_EXISTS, message=f'User info already exists!',
-                details={'user': request.data.get('id')}
-            ).response
-        if user_info_ser.is_valid():
-            user_info = user_info_ser.save()
-            return Response(UserSerializer(user_info).data)
-        else:
-            return ErrorResponse(
-                code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
-                details=user_info_ser.errors, extra={'data': request.data}
-            ).response
+        try:
+            return Response(UserSerializer(request.user).data)
+        except Exception as ex:
+            error_response = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR,
+                message='An unknown error occurred while fetching your information!',
+                details=ex.__str__(),
+                status_code=500
+            )
+            logger.exception(f'{error_response.uuid} An unknown error occurred while fetching your information {ex}')
+            return error_response.response

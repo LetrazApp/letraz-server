@@ -39,7 +39,7 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
             logger.exception(e)
             raise AuthenticationFailed('Invalid bearer token provided!')
         user = self.decode_jwt(token)
-        logger.debug('Authenticated user: ', user)
+        logger.debug(f'Authenticated user: {user}')
         return user, None
 
     def decode_jwt(self, token):

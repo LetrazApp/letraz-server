@@ -1,27 +1,31 @@
 ### Resume ###
 ### GET All Resume for user API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/
+GET https://{{url}}/api/v1/resume/
+Authorization: Bearer {{token}}
 
 ### GET Base Resume for user API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume?base=true
+GET https://{{url}}/api/v1/resume?base=true
+Authorization: Bearer {{token}}
 
 ### GET Resume by id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/
+Authorization: Bearer {{token}}
 
 ### Education ###
 ### GET All Education by resume id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/education/
+Authorization: Bearer {{token}}
 
 ### GET Education by id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/{{education_id}}/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/education/{{education_id}}/
+Authorization: Bearer {{token}}
 
 ### Create Education API
-POST https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/
+POST https://{{url}}/api/v1/resume/{{resume_id}}/education/
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "user": "user_2rFpCrEfFPZHEQMdfHQ7gC7OO65",
-  "resume_section": "e4f75672-81ff-46da-9dda-b737e850066a",
   "institution_name": "Vidyalankar Institute of Technology",
   "field_of_study": "Electronics",
   "degree": "Bachelor of Engineering",
@@ -35,21 +39,24 @@ Content-Type: application/json
 }
 
 ### Delete Education API
-DELETE https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/education/{{education_id}}/
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/education/{{education_id}}/
+Authorization: Bearer {{token}}
 
 ### Experience ###
 ### GET All Experience by resume id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/
+Authorization: Bearer {{token}}
 
 ### GET Experience by id API
-GET https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/{{experience_id}}/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/5eb80913-56a1-4569-bc7b-feee156dabe3/
+Authorization: Bearer {{token}}
 
 ### GET Experience by id API
-POST https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/
+POST https://{{url}}/api/v1/resume/{{resume_id}}/experience/
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "user": "user_2rFpCrEfFPZHEQMdfHQ7gC7OO65",
     "resume_section": "b604e2bb-200d-4ee9-b7fc-3348ec9d4d2b",
     "company_name": "Zillow Group",
     "job_title": "Senior Software Engineer",
@@ -65,5 +72,6 @@ Content-Type: application/json
   }
 
 ### GET Experience by id API
-DELETE https://{{url}}/api/v1/user/{{user_id}}/resume/{{resume_id}}/experience/{{experience_id}}/
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/ff4c1407-1ed7-448f-bccc-81e4105cd1a0/
+Authorization: Bearer {{token}}
 
