@@ -18,6 +18,8 @@ from letraz_server.conf.loggerConfig import LoggingConfig
 from letraz_server.contrib.settings_logger import get_settings_logger
 from django.core.management.utils import get_random_secret_key
 
+from letraz_server.contrib.validator.environment_validator import DBEnvironmentValidator
+
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -170,14 +172,29 @@ WSGI_APPLICATION = 'letraz_server.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_STATUS = 'UNINITIALIZED'
+if os.environ.get('ENGINE'):
+    dbEnvironmentValidator = DBEnvironmentValidator()
+    if dbEnvironmentValidator.validate():
+        try:
+            DATABASES = {
+                'default': dbEnvironmentValidator.get_config()
+            }
+            DB_STATUS = 'OPERATIONAL'
+        except Exception as e:
+            logger.exception(f'Exception occurred while connecting to db! \n{e}')
+            DB_STATUS = 'FATAL'
+    else:
+        logger.error(f'Database environment validation failed! \n{dbEnvironmentValidator.errors.__str__()}')
+        DB_STATUS = 'FATAL'
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
+    DB_STATUS = 'DEGRADED'
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

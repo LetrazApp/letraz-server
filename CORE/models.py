@@ -22,9 +22,15 @@ class Waitlist(models.Model):
         help_text='The unique identifier for the waitlist entry.'
     )
     email = models.EmailField(unique=True, help_text='The email of the user who joined the waitlist.')
-    referrer = models.CharField(max_length=50, default='website', help_text='The referrer of the user who joined the waitlist. Usually the source they have come from.')
-    waiting_number = AutoIncrementWaitingNumberField(editable=False, help_text='The waiting number of the user who joined the waitlist.')
-    created_at = models.DateTimeField(auto_now_add=True, help_text='The timestamp at which the user joined the waitlist.')
+    referrer = models.CharField(max_length=50, default='website',
+                                help_text='The referrer of the user who joined the waitlist. Usually the source they have come from.')
+    waiting_number = AutoIncrementWaitingNumberField(editable=False,
+                                                     help_text='The waiting number of the user who joined the waitlist.')
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      help_text='The timestamp at which the user joined the waitlist.')
+
+    class Meta:
+        db_table = "waitlist"
 
 
 class Country(models.Model):
