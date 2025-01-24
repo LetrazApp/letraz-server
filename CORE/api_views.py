@@ -30,11 +30,16 @@ logger = logging.getLogger(__module_name)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    response = {'status': 'OPERATIONAL', 'details': {'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS}}
-    if not settings.CLERK_STATUS == 'OPERATIONAL':
-        response = {'status': 'DEGRADED', 'details': {'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS}}
-    logger.info(f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}>')
-    return Response(response)
+    response = {'status': 'OPERATIONAL', 'details': {
+        'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "DB": settings.DB_STATUS
+    }}
+    if (not settings.CLERK_STATUS == 'OPERATIONAL') or (not settings.DB_STATUS == 'OPERATIONAL'):
+        response = {'status': 'DEGRADED', 'details': {
+            'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "DB": settings.DB_STATUS
+        }}
+        logger.error(f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}, "DB": {settings.DB_STATUS}>')
+        return Response(response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    return Response(response, status=status.HTTP_200_OK)
 
 
 # Error Example

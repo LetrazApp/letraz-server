@@ -16,4 +16,5 @@ dependencies = [
     "sentry-sdk[django]>=2.19.2",
     "djangorestframework-jwt>=1.11.0",
     "cryptography>=36.0.1",
+    "psycopg2>=2.9.10",
 ]
