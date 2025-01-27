@@ -44,7 +44,7 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
 
     def decode_jwt(self, token):
         jwks_data = self.clerk.get_jwks()
-        public_key = RSAAlgorithm.from_jwk(jwks_data['keys'][0])
+        public_key = RSAAlgorithm.from_jwk(json.dumps(jwks_data['keys'][0]))
         try:
             payload = jwt.decode(
                 token,
