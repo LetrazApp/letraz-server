@@ -44,7 +44,25 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
 
     def decode_jwt(self, token):
         jwks_data = self.clerk.get_jwks()
-        public_key = RSAAlgorithm.from_jwk(json.dumps(jwks_data['keys'][0]))
+        try:
+            if not jwks_data.get('keys'):
+                logger.error('Invalid JWKS: missing or empty keys array')
+                raise AuthenticationFailed('Invalid JWKS format')
+            
+            jwk_data = jwks_data['keys'][0]
+            try:
+                jwk_str = json.dumps(jwk_data)
+            except (TypeError, ValueError) as e:
+                logger.error(f'Failed to serialize JWK: {e}')
+                raise AuthenticationFailed('Invalid key format in JWKS')
+                
+            public_key = RSAAlgorithm.from_jwk(jwk_str)
+        except IndexError:
+            logger.error('Invalid JWKS: keys array is empty')
+            raise AuthenticationFailed('Invalid JWKS format')
+        except Exception as e:
+            logger.error(f'Failed to parse JWKS: {e}')
+            raise AuthenticationFailed('Failed to process JWKS')
         try:
             payload = jwt.decode(
                 token,
