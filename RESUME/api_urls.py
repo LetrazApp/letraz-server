@@ -1,11 +1,11 @@
-from django.urls import path, include
-from . import api_views
+from django.urls import path
+from .api_views import ResumeCRUD, EducationCRUD, ExperienceCRUD
 
 urlpatterns = [
-    path('', api_views.resume_crud),
-    path('<str:resume_id>/', api_views.resume_crud),
-    path('<str:resume_id>/education/', api_views.education_crud),
-    path('<str:resume_id>/education/<str:education_id>/', api_views.education_crud),
-    path('<str:resume_id>/experience/', api_views.experience_crud),
-    path('<str:resume_id>/experience/<str:experience_id>/', api_views.experience_crud),
+    path('', ResumeCRUD.as_view()),
+    path('<str:resume_id>/', ResumeCRUD.as_view()),
+    path('<str:resume_id>/education/', EducationCRUD.as_view()),
+    path('<str:resume_id>/education/<str:education_id>/', EducationCRUD.as_view()),
+    path('<str:resume_id>/experience/', ExperienceCRUD.as_view()),
+    path('<str:resume_id>/experience/<str:experience_id>/', ExperienceCRUD.as_view()),
 ]
