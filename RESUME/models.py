@@ -13,6 +13,7 @@ def generate_resume_id():
         nanoid = generate_nanoid()
     return f'rsm_{nanoid}'
 
+
 class Resume(models.Model):
     id = models.CharField(
         max_length=25,
@@ -26,18 +27,18 @@ class Resume(models.Model):
                             help_text='The job the resume is for. (optional in case it\'s a base resume for the user.)')
     base = models.BooleanField(default=False,
                                help_text='Whether the resume is a base resume for the user. One user can ')
-    variations = models.ManyToManyField('Resume', related_name='related_resumes', blank=True, null=True)
+    variations = models.ManyToManyField('Resume', related_name='related_resumes', blank=True)
     version = models.IntegerField(default=1, help_text='The version of the resume.')
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'job', 'version'],
+                fields=['user', 'job'],
                 name="unique_resume_per_job",
                 violation_error_message="This job is already have a resume.",
             ),
             models.UniqueConstraint(
-                fields=['user', 'base', 'version'],
+                fields=['user', 'base'],
                 name="unique_base_resume",
                 violation_error_message="Base resume already exists.",
             ),
