@@ -332,5 +332,4 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Experience.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
-                          extra={'experience': experience_id}).response
                                  extra={'experience': experience_id}).response
