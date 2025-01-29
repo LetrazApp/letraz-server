@@ -20,12 +20,13 @@ __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
 
-# Resume CRUD operations
-class ResumeCRUD(APIView):
-    def __init__(self):
+# Resume CRUD ViewSets
+@extend_schema(tags=['Resume object'])
+class ResumeViewSets(viewsets.GenericViewSet):
+    def __init__(self, *args, **kwargs):
         self.authenticated_user: User | None = None
         self.error: ErrorResponse | None = None
-        super(ResumeCRUD, self).__init__()
+        super(ResumeViewSets, self).__init__(*args, **kwargs)
 
     def __set_meta(self, request):
         """
@@ -35,31 +36,37 @@ class ResumeCRUD(APIView):
         self.authenticated_user: User = request.user
 
     @extend_schema(
-        parameters=[
-            OpenApiParameter(name='resume_id', description='Resume ID', required=False, type=str)
-        ],
-        responses={200: ResumeFullSerializer or ResumeFullSerializer(many=True), 500: ErrorSerializer},
-        summary="Get one or all resume"
+        responses={200: ResumeShortSerializer(many=True), 500: ErrorSerializer},
+        summary="Get all resume"
     )
-    def get(self, request, resume_id: str | None = None):
+    def list(self, request):
+        """
+        Gives a list of all resumes for the user
+        """
         self.__set_meta(request)
-        # If resume id is not provided send all resumes for the user
-        if request.query_params.get('base') and request.query_params.get('base') == 'true':
-            base_resume_qs: QuerySet[Resume] = self.authenticated_user.resume_set.filter(base=True)
-            if base_resume_qs.exists():
-                return Response(ResumeFullSerializer(base_resume_qs.first()).data)
-            else:
-                return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Base Resume not found!').response
-        elif resume_id:
-            resume_by_user_and_resume_id_qs: QuerySet[Resume] = self.authenticated_user.resume_set.filter(id=resume_id)
-            if resume_by_user_and_resume_id_qs.exists():
-                return Response(ResumeFullSerializer(resume_by_user_and_resume_id_qs.first()).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
-                ).response
+        return Response(ResumeShortSerializer(self.authenticated_user.resume_set.all(), many=True).data)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
+                             type=str)
+        ],
+        responses={200: ResumeFullSerializer, 500: ErrorSerializer},
+        summary="Get resume by id"
+    )
+    def retrieve(self, request, pk):
+        """
+        Gives a resume for the user by produced id
+        """
+        self.__set_meta(request)
+        resume_id = pk
+        resume_by_user_and_resume_id_qs: QuerySet[Resume] = self.authenticated_user.resume_set.filter(id=resume_id)
+        if resume_by_user_and_resume_id_qs.exists():
+            return Response(ResumeFullSerializer(resume_by_user_and_resume_id_qs.first()).data)
         else:
-            return Response(ResumeShortSerializer(self.authenticated_user.resume_set.all(), many=True).data)
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
+            ).response
 
 
 # Education CRUD operations
