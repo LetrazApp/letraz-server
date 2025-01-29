@@ -263,7 +263,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
-        new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Education)
+        new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Experience)
         payload = request.data
         payload['user'] = self.authenticated_user.id
         payload['resume_section'] = new_resume_section.id
