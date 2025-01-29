@@ -1,14 +1,15 @@
 import logging
 from django.db.models import QuerySet
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection
+from RESUME.models import Resume, Education, Experience, ResumeSection, generate_resume_id
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
@@ -169,19 +170,31 @@ class EducationCRUD(APIView):
                 code=ErrorCode.NOT_FOUND, message=f'Education not found!', extra={'education': education_id}).response
 
 
-# Experience CRUD operations
-class ExperienceCRUD(APIView):
+# Experience CRUD ViewSets
+@extend_schema(
+    tags=['Experience object'],
+    parameters=[
+        OpenApiParameter(
+            name="resume_id",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.PATH,
+            description="Unique identifier of the Resume",
+            required=True,
+        ),
+    ]
+)
+class ExperienceViewSets(viewsets.GenericViewSet):
     """
-    API reference of all available endpoints for the Experience object.
+    API reference of all available endpoints for the Experience.
     Contains endpoints for getting all experience for a user, get specific experience by its ID as well as create,
     update and delete individual experience by their ID.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.authenticated_user: User | None = None
         self.resume: Resume | None = None
-        self.error: ErrorResponse | None = None
-        super(ExperienceCRUD, self).__init__()
+        self.error: Response | None = None
+        super(ExperienceViewSets, self).__init__(*args, **kwargs)
 
     def __set_meta(self, request, resume_id: str):
         """
@@ -195,49 +208,27 @@ class ExperienceCRUD(APIView):
         self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        methods=['GET'], parameters=[
-            OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str),
-            OpenApiParameter(name='experience_id', description='Experience ID', required=False, type=str)
-        ],
+        tags=['Experience object'],
         responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
-        summary="Get one or all experiences",
+        summary="Get all experiences",
     )
-    def get(self, request, resume_id: str, experience_id: str | None = None) -> Response:
+    def list(self, request, resume_id: str) -> Response:
         """
-        Returns a user's experience by the experience's id.
-        If no experience id is not specified then returns all experience for the resume as specified in the resume id.
-        Send the id of the base resume to get the user's all base experience.
-        If the experience is not found, a 404 error is returned.
+        Gives all experiences for the Resume id
         """
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
-
-        if experience_id:
-            experience_qs: QuerySet[Experience] = self.authenticated_user.experience_set.filter(
-                resume_section__resume=self.resume
-            )
-            if experience_qs.exists():
-                return Response(ExperienceFullSerializer(experience_qs.first()).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': experience_id}
-                ).response
-        else:  # If resume id is not provided send all resumes for the user
-            return Response(
-                ExperienceFullSerializer(
-                    self.authenticated_user.experience_set.filter(resume_section__resume=self.resume), many=True).data
-            )
+        return Response(ExperienceFullSerializer(
+            self.authenticated_user.experience_set.filter(resume_section__resume=self.resume), many=True).data,
+                        status=status.HTTP_200_OK)
 
     @extend_schema(
-        methods=['POST'], parameters=[
-            OpenApiParameter(name='user_id', location=OpenApiParameter.PATH, description='User ID', required=True,
-                             type=str),
-            OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str)
-        ],
-        responses={200: ExperienceFullSerializer, 500: ErrorSerializer}, summary="Add a new experience"
+        tags=['Experience object'],
+        responses={201: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
+        summary="Create a new experience",
     )
-    def post(self, request, resume_id: str) -> Response:
+    def create(self, request, resume_id: str) -> Response:
         """
         Adds a new experience to the user's resume as specified in the resume id.
         If a base resume id is provided, the experience is added to the base resume.
@@ -245,7 +236,6 @@ class ExperienceCRUD(APIView):
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
-
         new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Education)
         payload = request.data
         payload['user'] = self.authenticated_user.id
@@ -263,30 +253,55 @@ class ExperienceCRUD(APIView):
             ).response
 
     @extend_schema(
-        methods=['DELETE'],
+        tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str),
-            OpenApiParameter(name='experience_id', description='Experience ID', required=True, type=str)
+            OpenApiParameter(name='id', description='Experience ID', required=True, type=str, location=OpenApiParameter.PATH)
         ],
-        responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
+        responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
+        summary="Get experience by id",
     )
-    def delete(self, request, resume_id: str, experience_id: str) -> Response:
+    def retrieve(self, request, resume_id: str, pk: str) -> Response:
         """
-        Deletes an experience from the user's resume as specified in the resume id.
+        Gives experience by id and resume id
         """
+        experience_id = pk
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
+        experience_qs: QuerySet[Experience] = self.authenticated_user.experience_set.filter(
+            resume_section__resume=self.resume, id=experience_id
+        )
+        if experience_qs.exists():
+            return Response(ExperienceFullSerializer(experience_qs.first()).data)
+        else:
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': experience_id}
+            ).response
 
+    @extend_schema(
+        tags=['Experience object'],
+        parameters=[
+            OpenApiParameter(name='id', description='Experience ID', required=True, type=str, location=OpenApiParameter.PATH)
+        ],
+        responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Deletes an experience from the user's resume as specified in the resume id.
+        """
+        experience_id = pk
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
         try:
             experience: Experience = self.authenticated_user.experience_set.get(
-                id=str(experience_id).strip(), resume_section__resume=self.resume
+                id=experience_id, resume_section__resume=self.resume
             )
             resume_sec = experience.resume_section
             experience.delete()
             resume_sec.delete()
-
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Education.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message=f'Experience not found!',
                                  extra={'experience': experience_id}).response
+
