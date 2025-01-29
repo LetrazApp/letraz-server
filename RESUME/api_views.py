@@ -38,7 +38,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
     )
     def list(self, request):
         """
-        Gives a list of all resumes for the user
+        Gives a list of all resumes for the user. If no resumes are found, an empty list is returned.
         """
         self.__set_meta(request)
         return Response(ResumeShortSerializer(self.authenticated_user.resume_set.all(), many=True).data)
@@ -70,8 +70,14 @@ class ResumeViewSets(viewsets.GenericViewSet):
 @extend_schema(
     tags=['Education object'],
     parameters=[
-        OpenApiParameter(name='resume_id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
-                         type=str)]
+        OpenApiParameter(
+            name='resume_id',
+            description='Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here',
+            required=True,
+            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR
+        )
+    ]
 )
 class EducationViewSets(viewsets.GenericViewSet):
     """
@@ -113,7 +119,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID', required=False,
+            OpenApiParameter(name='id', description='Education ID of the education you want to retrieve', required=False,
                              location=OpenApiParameter.PATH, type=str)
         ],
         responses={200: EducationFullSerializer, 500: ErrorSerializer},
@@ -144,7 +150,7 @@ class EducationViewSets(viewsets.GenericViewSet):
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new education to the user's resume as specified in the resume id.
-        If a base resume id is provided, the education is added to the base resume.
+        If a base is provided as the resume_id, the education is added to the base resume.
         """
         self.__set_meta(request, resume_id)
         if self.error:
@@ -178,7 +184,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID', required=False,
+            OpenApiParameter(name='id', description='Education ID of the education you want to delete', required=False,
                              location=OpenApiParameter.PATH, type=str)
         ],
         responses={204: None, 500: ErrorSerializer},
@@ -211,9 +217,9 @@ class EducationViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=OpenApiTypes.INT,
+            type=OpenApiTypes.STR,
             location=OpenApiParameter.PATH,
-            description="Unique identifier of the Resume",
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
             required=True,
         ),
     ]
@@ -301,7 +307,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     @extend_schema(
         tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID', required=True, type=str,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to retrieve', required=True, type=str,
                              location=OpenApiParameter.PATH)
         ],
         responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
@@ -328,7 +334,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     @extend_schema(
         tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID', required=True, type=str,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to delete', required=True, type=str,
                              location=OpenApiParameter.PATH)
         ],
         responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
