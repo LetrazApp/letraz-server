@@ -6,7 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection, generate_resume_id
+from RESUME.models import Resume, Education, Experience, ResumeSection
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
