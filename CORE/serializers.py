@@ -25,10 +25,10 @@ class HealthDetailsSerializer(serializers.Serializer):
     )
     clerk = serializers.ChoiceField(
         CLERK_STATUS_CHOICES,
-        help_text='The health status of Clerk integration. The status can be ok, degraded or failing.')
+        help_text='The health status of Clerk integration. The status can be OPERATIONAL or DOWN.')
     DB = serializers.ChoiceField(
         DB_STATUS_CHOICES,
-        help_text='The health status of  Clerk connection. The status can be ok, degraded or failing.')
+        help_text='The health status of  Clerk connection. The status can be OPERATIONAL, DEGRADED or FATAL.')
 
 
 class HealthCheckSerializer(serializers.Serializer):
