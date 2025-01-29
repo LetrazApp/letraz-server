@@ -330,6 +330,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             experience.delete()
             resume_sec.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        except Education.DoesNotExist:
-            return ErrorResponse(code=ErrorCode.NOT_FOUND, message=f'Experience not found!',
+        except Experience.DoesNotExist:
+            return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
+                          extra={'experience': experience_id}).response
                                  extra={'experience': experience_id}).response
