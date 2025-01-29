@@ -3,10 +3,7 @@ from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view
-from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience, ResumeSection, generate_resume_id
@@ -157,16 +154,27 @@ class EducationViewSets(viewsets.GenericViewSet):
         payload['user'] = self.authenticated_user.id
         payload['resume_section'] = new_resume_section.id
         education_ser: EducationUpsertSerializer = EducationUpsertSerializer(data=payload)
-        if education_ser.is_valid():
-            new_education = education_ser.save()
-            return Response(EducationFullSerializer(new_education).data, status=status.HTTP_201_CREATED)
-        else:
+        try:
+            if education_ser.is_valid():
+                new_education = education_ser.save()
+                return Response(EducationFullSerializer(new_education).data, status=status.HTTP_201_CREATED)
+            else:
+                if new_resume_section:
+                    new_resume_section.delete()
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=education_ser.errors, extra={'data': request.data}
+                ).response
+        except Exception as e:
             if new_resume_section:
                 new_resume_section.delete()
-            return ErrorResponse(
-                code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
-                details=education_ser.errors, extra={'data': request.data}
-            ).response
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=education_ser.errors, extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding education: {e}')
+            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -268,16 +276,27 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         payload['user'] = self.authenticated_user.id
         payload['resume_section'] = new_resume_section.id
         experience_ser: ExperienceUpsertSerializer = ExperienceUpsertSerializer(data=request.data)
-        if experience_ser.is_valid():
-            new_experience = experience_ser.save()
-            return Response(ExperienceFullSerializer(new_experience).data, status=status.HTTP_201_CREATED)
-        else:
+        try:
+            if experience_ser.is_valid():
+                new_experience = experience_ser.save()
+                return Response(ExperienceFullSerializer(new_experience).data, status=status.HTTP_201_CREATED)
+            else:
+                if new_resume_section:
+                    new_resume_section.delete()
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided!',
+                    details=experience_ser.errors, extra={'data': request.data}
+                ).response
+        except Exception as e:
             if new_resume_section:
                 new_resume_section.delete()
-            return ErrorResponse(
-                code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
-                details=experience_ser.errors, extra={'data': request.data}
-            ).response
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=experience_ser.errors, extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
+            return error_response.response
 
     @extend_schema(
         tags=['Experience object'],
