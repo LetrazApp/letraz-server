@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models import Q
 from CORE.models import Country
 from PROFILE.models import User
 from JOB.models import Job
@@ -39,6 +40,7 @@ class Resume(models.Model):
             ),
             models.UniqueConstraint(
                 fields=['user', 'base'],
+                condition=Q(base=True),
                 name="unique_base_resume",
                 violation_error_message="Base resume already exists.",
             ),
