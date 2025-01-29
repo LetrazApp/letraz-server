@@ -70,17 +70,23 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
 
 # Education CRUD operations
-class EducationCRUD(APIView):
+@extend_schema(
+    tags=['Education object'],
+    parameters=[
+        OpenApiParameter(name='resume_id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
+                         type=str)]
+)
+class EducationViewSets(viewsets.GenericViewSet):
     """
     API reference of all available endpoints for the Education object.
     Contains endpoints for getting all educations for a user, get specific education by its ID as well as create, update
     and delete individual educations by their ID.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.authenticated_user: User | None = None
-        self.error: ErrorResponse | None = None
-        super(EducationCRUD, self).__init__()
+        self.error: Response | None = None
+        super(EducationViewSets, self).__init__(*args, **kwargs)
 
     def __set_meta(self, request, resume_id: str):
         """
@@ -94,47 +100,58 @@ class EducationCRUD(APIView):
         self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        parameters=[
-            OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str),
-            OpenApiParameter(name='education_id', description='Education ID', required=False, type=str)
-        ],
-        responses={200: EducationFullSerializer or EducationFullSerializer(many=True), 500: ErrorSerializer},
-        summary="Get one or all educations",
+        responses={200: EducationFullSerializer(many=True), 500: ErrorSerializer},
+        summary="Get all educations",
     )
-    def get(self, request, resume_id: str, education_id: str | None = None) -> Response:
+    def list(self, request, resume_id: str) -> Response:
         """
-        Returns a user's education by the education's id.
-        If no education id is not specified then returns all educations for the resume as specified in the resume id.
-        Send the id of the base resume to get the user's all base educations.
-        If the education is not found, a 404 error is returned.
+        Returns all education for the resume id of the user
         """
         self.__set_meta(request, resume_id)
-        if education_id:
-            education_sq: QuerySet[Education] = self.authenticated_user.education_set.filter(
-                resume_section__resume=self.resume, id=education_id
-            )
-            if education_sq.exists():
-                return Response(EducationFullSerializer(education_sq.first()).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Education not found!', details={'education': education_id}
-                ).response
-        else:  # If resume id is not provided send all resumes for the user
-            return Response(EducationFullSerializer(self.authenticated_user.education_set.filter(
-                resume_section__resume=self.resume
-            ), many=True).data)
+        if self.error:
+            return self.error
+        return Response(EducationFullSerializer(self.authenticated_user.education_set.filter(
+            resume_section__resume=self.resume
+        ), many=True).data)
 
     @extend_schema(
-        parameters=[OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str)],
+        parameters=[
+            OpenApiParameter(name='id', description='Education ID', required=False,
+                             location=OpenApiParameter.PATH, type=str)
+        ],
+        responses={200: EducationFullSerializer, 500: ErrorSerializer},
+        summary="Get education by id",
+    )
+    def retrieve(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Returns a user's education by the education's id.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        education_id: str = pk
+        education_sq: QuerySet[Education] = self.authenticated_user.education_set.filter(
+            resume_section__resume=self.resume, id=education_id
+        )
+        if education_sq.exists():
+            return Response(EducationFullSerializer(education_sq.first()).data)
+        else:
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Education not found!', details={'education': education_id}
+            ).response
+
+    @extend_schema(
         responses={200: EducationFullSerializer, 500: ErrorSerializer},
         summary="Add a new education"
     )
-    def post(self, request, resume_id: str) -> Response:
+    def create(self, request, resume_id: str) -> Response:
         """
         Adds a new education to the user's resume as specified in the resume id.
         If a base resume id is provided, the education is added to the base resume.
         """
         self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
         new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Education)
         payload = request.data
         payload['user'] = self.authenticated_user.id
@@ -153,17 +170,20 @@ class EducationCRUD(APIView):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='resume_id', description='Resume ID', required=True, type=str),
-            OpenApiParameter(name='education_id', description='Education ID', required=True, type=str)
+            OpenApiParameter(name='id', description='Education ID', required=False,
+                             location=OpenApiParameter.PATH, type=str)
         ],
         responses={204: None, 500: ErrorSerializer},
         summary="Delete an education"
     )
-    def delete(self, request, resume_id: str, education_id: str | None = None) -> Response:
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Deletes an education from the user's resume as specified in the resume id.
         """
+        education_id = pk
         self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
         try:
             education: Education = self.authenticated_user.education_set.get(
                 id=str(education_id).strip(), resume_section__resume=self.resume
@@ -262,7 +282,8 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     @extend_schema(
         tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID', required=True, type=str, location=OpenApiParameter.PATH)
+            OpenApiParameter(name='id', description='Experience ID', required=True, type=str,
+                             location=OpenApiParameter.PATH)
         ],
         responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
         summary="Get experience by id",
@@ -288,7 +309,8 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     @extend_schema(
         tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID', required=True, type=str, location=OpenApiParameter.PATH)
+            OpenApiParameter(name='id', description='Experience ID', required=True, type=str,
+                             location=OpenApiParameter.PATH)
         ],
         responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
     )
@@ -311,4 +333,3 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         except Education.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message=f'Experience not found!',
                                  extra={'experience': experience_id}).response
-
