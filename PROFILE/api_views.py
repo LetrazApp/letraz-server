@@ -16,7 +16,19 @@ from .serializers import UserSerializer, UserUpsertSerializer
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
-
+@extend_schema(
+    methods=['GET'],
+    tags=['User'],
+    responses={200: UserSerializer, 500: ErrorSerializer},
+    summary="Get user info",
+)
+@extend_schema(
+    methods=['PATCH'],
+    tags=['User'],
+    summary="Add a new user info",
+    request=UserUpsertSerializer,
+    responses={201: UserSerializer, 400: ErrorSerializer}
+)
 class UserCRUD(APIView):
     """
     API reference for all available endpoints for the User Profile Info object.
@@ -52,7 +64,7 @@ class UserCRUD(APIView):
 
     def patch(self, request):
         """
-        Send a PATCH request with the user's data to add a upsert a new user info entry.
+        Send a PATCH request with the user's data to add or upsert a user info entry.
         If the user info already exists, it will be updated. If the user info does not exist, it will be created.
         """
         self.__set_meta(request)

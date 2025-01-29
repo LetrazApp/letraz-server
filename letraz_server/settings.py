@@ -99,7 +99,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 
     'SERVERS': [
-        {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
+        {'url': 'https://api.letraz.app/api/v1', 'description': 'Production Server'}
     ],
 
     'PREPROCESSING_HOOKS': [],
@@ -123,7 +123,7 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
         {'name': 'Core APIs', 'description': 'Core APIs for Letraz Backend'},
         {'name': 'Waitlist', 'description': 'Mange waitlist, signups, retrieve waitlist and everything related to waitlist'},
-        {'name': 'User info', 'description': 'Manage user info, retrieve, create, update user info and everything related to user info'},
+        {'name': 'User', 'description': 'Get or update user details of currently logged in user'},
         {'name': 'Job object', 'description': 'Manage job objects, retrieve job objects and everything related to job objects'},
         {'name': 'Resume object', 'description': 'Manage resume objects, retrieve resume objects and everything related to resume objects'},
         {'name': 'Education object', 'description': 'Manage education objects, retrieve education objects and everything related to education objects'},

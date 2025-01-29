@@ -3,10 +3,6 @@
 GET https://{{url}}/api/v1/resume/
 Authorization: Bearer {{token}}
 
-### GET Base Resume for user API
-GET https://{{url}}/api/v1/resume?base=true
-Authorization: Bearer {{token}}
-
 ### GET Resume by id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/
 Authorization: Bearer {{token}}
@@ -48,7 +44,7 @@ GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/
 Authorization: Bearer {{token}}
 
 ### GET Experience by id API
-GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/5eb80913-56a1-4569-bc7b-feee156dabe3/
+GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
 Authorization: Bearer {{token}}
 
 ### GET Experience by id API
@@ -72,6 +68,6 @@ Content-Type: application/json
   }
 
 ### GET Experience by id API
-DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/ff4c1407-1ed7-448f-bccc-81e4105cd1a0/
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
 Authorization: Bearer {{token}}
 

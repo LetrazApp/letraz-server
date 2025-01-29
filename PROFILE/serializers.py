@@ -20,4 +20,5 @@ class UserSerializer(serializers.ModelSerializer):
 class UserUpsertSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = "__all__"
+        read_only_fields = ['id', 'created_at', 'updated_at', 'password', 'last_login', 'is_superuser', 'is_active', 'is_staff']
+        exclude = ('groups', 'user_permissions')

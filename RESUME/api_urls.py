@@ -1,11 +1,16 @@
 from django.urls import path, include
-from . import api_views
+from rest_framework import routers
+
+from .api_views import ResumeViewSets, EducationViewSets, ExperienceViewSets
+
+root_router = routers.DefaultRouter()
+root_router.register(r'', ResumeViewSets, basename='resume')
+
+child_router = routers.DefaultRouter()
+child_router.register(r'experience', ExperienceViewSets, basename='experience')
+child_router.register(r'education', EducationViewSets, basename='education')
 
 urlpatterns = [
-    path('', api_views.resume_crud),
-    path('<str:resume_id>/', api_views.resume_crud),
-    path('<str:resume_id>/education/', api_views.education_crud),
-    path('<str:resume_id>/education/<str:education_id>/', api_views.education_crud),
-    path('<str:resume_id>/experience/', api_views.experience_crud),
-    path('<str:resume_id>/experience/<str:experience_id>/', api_views.experience_crud),
+    path('', include(root_router.urls)),
+    path('<str:resume_id>/', include(child_router.urls)),
 ]
