@@ -1,12 +1,10 @@
 import logging
-
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-
 from CORE.models import Waitlist
 from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer
 from letraz_server.contrib.constant import ErrorCode

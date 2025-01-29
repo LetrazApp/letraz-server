@@ -16,7 +16,19 @@ from .serializers import UserSerializer, UserUpsertSerializer
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
-
+@extend_schema(
+    methods=['GET'],
+    tags=['User'],
+    responses={200: UserSerializer, 500: ErrorSerializer},
+    summary="Get user info",
+)
+@extend_schema(
+    methods=['PATCH'],
+    tags=['User'],
+    summary="Add a new user info",
+    request=UserUpsertSerializer,
+    responses={201: UserSerializer, 400: ErrorSerializer}
+)
 class UserCRUD(APIView):
     """
     API reference for all available endpoints for the User Profile Info object.
