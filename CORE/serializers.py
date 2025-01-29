@@ -4,18 +4,43 @@ from rest_framework import serializers
 from .models import Country, Waitlist
 
 
-class HealthCheckSerializer(serializers.Serializer):
-    STATUS_CHOICES = [
-        ('OK', 'ok'),
-        ('DEGRADED', 'degraded'),
-        ('FAILING', 'failing')
+class HealthDetailsSerializer(serializers.Serializer):
+    SENTRY_STATUS_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('UNINITIALIZED', 'UNINITIALIZED'),
+        ('FAILED', 'FAILED')
     ]
-
-    status = serializers.CharField(help_text='The health status of the server. The status can be ok, degraded or failing.')
-    sentry = serializers.BooleanField(
-        default=True,
+    CLERK_STATUS_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('DOWN', 'DOWN')
+    ]
+    DB_STATUS_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('DEGRADED', 'DEGRADED'),
+        ('FATAL', 'FATAL')
+    ]
+    sentry = serializers.ChoiceField(
+        SENTRY_STATUS_CHOICES,
         help_text='The status of the sentry integration. If False, the sentry is not initialized, possibly due to absense of environment variables, which is expected or misconfigured initialization.'
     )
+    clerk = serializers.ChoiceField(
+        CLERK_STATUS_CHOICES,
+        help_text='The health status of Clerk integration. The status can be ok, degraded or failing.')
+    DB = serializers.ChoiceField(
+        DB_STATUS_CHOICES,
+        help_text='The health status of  Clerk connection. The status can be ok, degraded or failing.')
+
+
+class HealthCheckSerializer(serializers.Serializer):
+    STATUS_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('DEGRADED', 'DEGRADED')
+    ]
+
+    status = serializers.ChoiceField(
+        help_text='The health status of the server. The status can be ok, degraded or failing.', choices=STATUS_CHOICES)
+    details = HealthDetailsSerializer()
+
 
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:

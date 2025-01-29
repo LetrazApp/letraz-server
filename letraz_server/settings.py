@@ -99,7 +99,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 
     'SERVERS': [
-        {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
+        {'url': 'https://api.letraz.app/api/v1', 'description': 'Production Server'}
     ],
 
     'PREPROCESSING_HOOKS': [],
