@@ -93,7 +93,23 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     def __set_meta(self, request, resume_id: str):
         """
-        Retrieve check and set authenticated user for Education CRUD
+        Set up metadata for education or experience operations on a specific resume.
+        
+        This method authenticates the user and retrieves or creates a resume context for subsequent CRUD operations. It handles two scenarios:
+        1. When 'base' resume is requested: Finds an existing base resume or creates a new one
+        2. When a specific resume ID is provided: Retrieves the resume or sets an error response if not found
+        
+        Parameters:
+            request (Request): The incoming HTTP request
+            resume_id (str): The ID of the resume or 'base' to indicate a base resume
+        
+        Side Effects:
+            - Sets `self.authenticated_user` to the current user
+            - Sets `self.resume` to the retrieved or created resume
+            - Sets `self.error` if the resume is not found for a non-base resume ID
+        
+        Returns:
+            None: Returns early with an error response if resume is not found
         """
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
@@ -245,7 +261,22 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     def __set_meta(self, request, resume_id: str):
         """
-        Retrieve check and set authenticated user & resume
+        Set up metadata for the current resume operation, handling base and specific resumes.
+        
+        This method performs the following key tasks:
+        - Authenticates the current user from the request
+        - Handles resume retrieval or creation based on the resume_id
+        - Supports 'base' resume creation if no base resume exists
+        - Sets error response if a specific resume is not found
+        
+        Parameters:
+            request (Request): The incoming HTTP request
+            resume_id (str): Identifier for the resume, can be 'base' or a specific resume ID
+        
+        Side Effects:
+            - Sets self.authenticated_user to the current user
+            - Sets self.resume to the retrieved or created resume
+            - Sets self.error if resume retrieval fails
         """
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
