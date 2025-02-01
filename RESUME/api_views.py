@@ -53,10 +53,14 @@ class ResumeViewSets(viewsets.GenericViewSet):
     )
     def retrieve(self, request, pk):
         """
-        Gives a resume for the user by produced id
+        Gives a resume for the user by produced id or gives base resume of the user if id is provided as `base`.
         """
         self.__set_meta(request)
-        resume_id = pk
+        if pk == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            resume_id = base_resume.id
+        else:
+            resume_id = pk
         resume_by_user_and_resume_id_qs: QuerySet[Resume] = self.authenticated_user.resume_set.filter(id=resume_id)
         if resume_by_user_and_resume_id_qs.exists():
             return Response(ResumeFullSerializer(resume_by_user_and_resume_id_qs.first()).data)
@@ -88,6 +92,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     def __init__(self, *args, **kwargs):
         self.authenticated_user: User | None = None
+        self.resume: Resume | None = None
         self.error: Response | None = None
         super(EducationViewSets, self).__init__(*args, **kwargs)
 
@@ -98,10 +103,8 @@ class EducationViewSets(viewsets.GenericViewSet):
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
         if resume_id == 'base':
-            if self.authenticated_user.resume_set.filter(base=True).exists():
-                self.resume = self.authenticated_user.resume_set.filter(base=True).first()
-            else:
-                self.resume = self.authenticated_user.resume_set.create(base=True)
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
         else:
             if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
                 self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!', status_code=404).response
@@ -250,10 +253,8 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
         if resume_id == 'base':
-            if self.authenticated_user.resume_set.filter(base=True).exists():
-                self.resume = self.authenticated_user.resume_set.filter(base=True).first()
-            else:
-                self.resume = self.authenticated_user.resume_set.create(base=True)
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
         else:
             if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
                 self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',

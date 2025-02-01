@@ -7,6 +7,10 @@ Authorization: Bearer {{token}}
 GET https://{{url}}/api/v1/resume/{{resume_id}}/
 Authorization: Bearer {{token}}
 
+### GET Base Resume for the user API
+GET https://{{url}}/api/v1/resume/base/
+Authorization: Bearer {{token}}
+
 ### Education ###
 ### GET All Education by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/education/
