@@ -1,28 +1,28 @@
 ### Resume ###
 ### GET All Resume for user API
 GET https://{{url}}/api/v1/resume/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### GET Resume by id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### GET Base Resume for the user API
 GET https://{{url}}/api/v1/resume/base/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### Education ###
 ### GET All Education by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/education/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### GET Education by id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/education/{{education_id}}/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### Create Education API
 POST https://{{url}}/api/v1/resume/{{resume_id}}/education/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 Content-Type: application/json
 
 {
@@ -40,20 +40,20 @@ Content-Type: application/json
 
 ### Delete Education API
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/education/{{education_id}}/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### Experience ###
 ### GET All Experience by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### GET Experience by id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### GET Experience by id API
 POST https://{{url}}/api/v1/resume/{{resume_id}}/experience/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 Content-Type: application/json
 
 {
@@ -73,5 +73,5 @@ Content-Type: application/json
 
 ### GET Experience by id API
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
