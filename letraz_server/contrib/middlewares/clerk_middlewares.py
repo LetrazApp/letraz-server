@@ -26,13 +26,19 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
         )
 
     def authenticate(self, request):
+        authentication_cookies = request.COOKIES
         authentication_header = request.headers.get('Authorization')
-        if not authentication_header:
+        if not (authentication_cookies or authentication_header):
             return None, None
         try:
-            if not authentication_header.split(' ')[0] == 'Bearer':
-                raise AuthenticationFailed('Token must be a bearer token!')
-            token = authentication_header.split(' ')[1]
+            if authentication_cookies.get('__session'):
+                logger.debug(f'AUTH_TYPE :: {request.method}: {request.get_full_path()} -> Authenticate with Cookies')
+                token = authentication_cookies.get('__session')
+            elif authentication_header.split(' ')[0] == 'Bearer':
+                logger.debug(f'AUTH_TYPE :: {request.method}: {request.get_full_path()} -> Authenticate with Header')
+                token = authentication_header.split(' ')[1]
+            else:
+                raise AuthenticationFailed('Token must be a bearer token or session cookie.')
         except IndexError:
             raise AuthenticationFailed('Bearer token not provided!')
         except Exception as e:

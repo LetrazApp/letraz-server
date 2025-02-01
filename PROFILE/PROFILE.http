@@ -1,10 +1,10 @@
 ### GET user by id API
 GET https://{{url}}/api/v1/user/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 
 ### Update user by id API
 PATCH https://{{url}}/api/v1/user/
-Authorization: Bearer {{token}}
+Cookie: __session={{token}}
 Content-Type: application/json
 
 {
