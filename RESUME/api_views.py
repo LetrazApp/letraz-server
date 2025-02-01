@@ -97,10 +97,16 @@ class EducationViewSets(viewsets.GenericViewSet):
         """
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
-        if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
-            self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!', status_code=404).response
-            return
-        self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+        if resume_id == 'base':
+            if self.authenticated_user.resume_set.filter(base=True).exists():
+                self.resume = self.authenticated_user.resume_set.filter(base=True).first()
+            else:
+                self.resume = self.authenticated_user.resume_set.create(base=True)
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!', status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
         responses={200: EducationFullSerializer(many=True), 500: ErrorSerializer},
@@ -243,10 +249,17 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         """
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
-        if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
-            self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!', status_code=404).response
-            return
-        self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+        if resume_id == 'base':
+            if self.authenticated_user.resume_set.filter(base=True).exists():
+                self.resume = self.authenticated_user.resume_set.filter(base=True).first()
+            else:
+                self.resume = self.authenticated_user.resume_set.create(base=True)
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
         tags=['Experience object'],
