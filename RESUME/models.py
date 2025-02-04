@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import Q
 from rest_framework import status
 from letraz_server.contrib.constant import ErrorCode
-from CORE.models import Country
+from CORE.models import Country, Skill
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
@@ -193,25 +193,6 @@ class Experience(models.Model):
 
     def __str__(self):
         return f'{self.company_name}'
-
-
-class Skill(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
-                          help_text='The unique identifier for the experience entry.')
-    category = models.CharField(max_length=50, blank=True, null=True,
-                                help_text='The category of the skill. (optional)')
-    name = models.CharField(max_length=250, help_text='The name of the skill.')
-    preferred = models.BooleanField(default=False)
-    alias = models.ManyToManyField('Skill', blank=True, related_name='alias_skills')
-    created_at = models.DateTimeField(auto_now_add=True, help_text='The date and time the skill entry was created.')
-    updated_at = models.DateTimeField(auto_now=True,
-                                      help_text='The date and time the skill entry was last updated.')
-
-    class Meta:
-        unique_together = ('category', 'name')
-
-    def __str__(self):
-        return f'{self.name} [{self.category}]'
 
 
 class Proficiency(models.Model):
