@@ -1,10 +1,14 @@
+import logging
 import uuid
 from django.db import models
 from django.db.models import Q
+from rest_framework import status
+from letraz_server.contrib.constant import ErrorCode
 from CORE.models import Country
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
+from letraz_server.contrib.error_framework import ErrorResponse
 
 
 # Create your models here.
@@ -34,14 +38,11 @@ class Resume(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'job'],
-                name="unique_resume_per_job",
+                fields=['user', 'job'], name="unique_resume_per_job",
                 violation_error_message="This job is already have a resume.",
             ),
             models.UniqueConstraint(
-                fields=['user', 'base'],
-                condition=Q(base=True),
-                name="unique_base_resume",
+                fields=['user', 'base'], condition=Q(base=True), name="unique_base_resume",
                 violation_error_message="Base resume already exists.",
             ),
         ]
@@ -59,6 +60,29 @@ class Resume(models.Model):
             return self.variations.order_by('version').last().version + 1
         return 1
 
+    def add_skill(self, skill_name, skill_category=None, skill_proficiency=None):
+        skill: Skill
+        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
+        try:
+            resume_skill_section: ResumeSection
+            resume_skill_section_qs = self.resumesection_set.filter(
+                type=ResumeSection.ResumeSectionType.Skill)
+            if resume_skill_section_qs.exists():
+                resume_skill_section = resume_skill_section_qs.first()
+            else:
+                resume_skill_section = self.create_section(ResumeSection.ResumeSectionType.Skill)
+            proficiency: Proficiency
+            proficiency, created = resume_skill_section.proficiency_set.get_or_create(skill=skill)
+            if skill_proficiency:
+                proficiency.level = skill_proficiency
+            proficiency.save()
+        except Exception as ex:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected Error occurred.', details=ex.__str__(),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logging.exception(f'UUID -> {error_response.uuid} | Exception occurred: {ex.__str__()}')
+            return error_response.response
+
     def __str__(self):
         return f'{self.id} [{self.user.get_full_name()}]'
 
@@ -67,6 +91,7 @@ class ResumeSection(models.Model):
     class ResumeSectionType(models.TextChoices):
         Education = 'edu'
         Experience = 'exp'
+        Skill = 'skl'
         Others = 'oth'
 
     id = models.UUIDField(
@@ -168,3 +193,39 @@ class Experience(models.Model):
 
     def __str__(self):
         return f'{self.company_name}'
+
+
+class Skill(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
+                          help_text='The unique identifier for the experience entry.')
+    category = models.CharField(max_length=50, blank=True, null=True,
+                                help_text='The category of the skill. (optional)')
+    name = models.CharField(max_length=250, help_text='The name of the skill.')
+    preferred = models.BooleanField(default=False)
+    alias = models.ManyToManyField('Skill', blank=True, related_name='alias_skills')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='The date and time the skill entry was created.')
+    updated_at = models.DateTimeField(auto_now=True,
+                                      help_text='The date and time the skill entry was last updated.')
+
+    class Meta:
+        unique_together = ('category', 'name')
+
+    def __str__(self):
+        return f'{self.name} [{self.category}]'
+
+
+class Proficiency(models.Model):
+    class Level(models.TextChoices):
+        Beginner = 'BEG'
+        Intermediate = 'INT'
+        Advanced = 'ADV'
+        Expert = 'EXP'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
+                          help_text='The unique identifier for the experience entry.')
+    skill = models.ForeignKey(Skill, models.CASCADE, null=False, blank=False)
+    resume_section = models.ForeignKey(ResumeSection, models.CASCADE, null=False, blank=False)
+    level = models.CharField(max_length=3, choices=Level.choices, null=False, blank=False)
+
+    def __str__(self):
+        return f'{self.skill.name} [{self.skill.category}] - {self.get_level_display()}'
