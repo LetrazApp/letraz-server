@@ -1,7 +1,7 @@
 from random import choices
 
 from rest_framework import serializers
-from .models import Country, Waitlist
+from .models import Country, Waitlist, Skill
 
 
 class HealthDetailsSerializer(serializers.Serializer):
@@ -81,3 +81,21 @@ class WaitlistSerializer(serializers.ModelSerializer):
         model = Waitlist
         fields = '__all__'
         read_only_fields = ['id', 'waiting_number', 'created_at']
+
+
+class AliasSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        read_only_fields = ['id', 'updated_at', 'created_at']
+        exclude = ['alias', ]
+
+
+class SkillSerializer(serializers.ModelSerializer):
+    alias = AliasSkillSerializer(many=True)
+
+    class Meta:
+        model = Skill
+        fields = ('id', 'category', 'name',
+                  'preferred', 'alias',
+                  'updated_at', 'created_at')
+        read_only_fields = ['id', 'updated_at', 'created_at']

@@ -8,6 +8,7 @@ from CORE.models import Country, Skill
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
+
 from letraz_server.contrib.error_framework import ErrorResponse
 
 
@@ -60,22 +61,25 @@ class Resume(models.Model):
             return self.variations.order_by('version').last().version + 1
         return 1
 
+    def get_skill_resume_section(self):
+        resume_skill_section_qs = self.resumesection_set.filter(
+            type=ResumeSection.ResumeSectionType.Skill)
+        if resume_skill_section_qs.exists():
+            return resume_skill_section_qs.first()
+        else:
+            return self.create_section(ResumeSection.ResumeSectionType.Skill)
+
     def add_skill(self, skill_name, skill_category=None, skill_proficiency=None):
         skill: Skill
         skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
         try:
-            resume_skill_section: ResumeSection
-            resume_skill_section_qs = self.resumesection_set.filter(
-                type=ResumeSection.ResumeSectionType.Skill)
-            if resume_skill_section_qs.exists():
-                resume_skill_section = resume_skill_section_qs.first()
-            else:
-                resume_skill_section = self.create_section(ResumeSection.ResumeSectionType.Skill)
+            resume_skill_section: ResumeSection = self.get_skill_resume_section()
             proficiency: Proficiency
             proficiency, created = resume_skill_section.proficiency_set.get_or_create(skill=skill)
             if skill_proficiency:
                 proficiency.level = skill_proficiency
             proficiency.save()
+            return proficiency
         except Exception as ex:
             error_response: ErrorResponse = ErrorResponse(
                 code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected Error occurred.', details=ex.__str__(),

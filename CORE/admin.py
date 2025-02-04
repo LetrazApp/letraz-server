@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Waitlist, Country
+from .models import Waitlist, Country, Skill
 
 
 # Register your models here.
@@ -13,3 +13,8 @@ class WishlistAdmin(admin.ModelAdmin):
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('code', 'name')
+
+
+@admin.register(Skill)
+class SkillAdmin(admin.ModelAdmin):
+    list_display = ('id', 'category', 'name')

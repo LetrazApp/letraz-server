@@ -75,3 +75,19 @@ Content-Type: application/json
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
 Cookie: __session={{token}}
 
+
+### SKILL ###
+### GET All Skill by resume id API
+GET https://{{url}}/api/v1/resume/{{resume_id}}/skill/
+Cookie: __session={{token}}
+
+### GET Skill by id & resume id API
+POST https://{{url}}/api/v1/resume/{{resume_id}}/skill/
+Cookie: __session={{token}}
+Content-Type: application/json
+
+{
+    "name": "React",
+    "category": "Frontend",
+    "level": "EXP"
+}
