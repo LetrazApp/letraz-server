@@ -87,6 +87,16 @@ class Resume(models.Model):
             logging.exception(f'UUID -> {error_response.uuid} | Exception occurred: {ex.__str__()}')
             return error_response.response
 
+    def remove_skill(self, proficiency_id):
+        skill_resume_section: ResumeSection = self.get_skill_resume_section()
+        proficiency: Proficiency
+        for proficiency in skill_resume_section.proficiency_set.all():
+            if proficiency.id == proficiency_id:
+                proficiency.delete()
+                return True
+        else:
+            raise ValueError
+
     def __str__(self):
         return f'{self.id} [{self.user.get_full_name()}]'
 
