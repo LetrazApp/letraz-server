@@ -2,7 +2,8 @@ import logging
 from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
@@ -464,7 +465,8 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume', required=True,
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+                             required=True,
                              type=str, location=OpenApiParameter.PATH)
         ],
         responses={200: ProficiencySerializer, 500: ErrorSerializer},
@@ -510,10 +512,11 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume', required=True,
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+                             required=True,
                              type=str, location=OpenApiParameter.PATH)
         ],
-        responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
+        responses={204: None, 500: ErrorSerializer}, summary="Remove skill from resume"
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
@@ -536,3 +539,26 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                                            details=ex.__str__(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
             logger.exception(f'{error_response.uuid} -> Unexpected exception occurred: {ex.__str__()}')
             return error_response.response
+
+    @extend_schema(
+        responses={200: serializers.ListSerializer(child=serializers.CharField()), 500: ErrorSerializer},
+        summary="Get all skill category for the resume"
+    )
+    @action(detail=False, methods=['get'], url_path='categories')
+    def get_featured_resumes(self, request, resume_id: str) -> Response:
+        """
+        Get all skill category for the resume
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        all_skill_proficiencies_for_resume: QuerySet[Proficiency] = Proficiency.objects.filter(
+            resume_section__resume=self.resume
+        )
+        all_skill_categories_for_resume: set[str] = set()
+        proficiency: Proficiency
+        for proficiency in all_skill_proficiencies_for_resume:
+            if not proficiency.skill.category:
+                continue
+            all_skill_categories_for_resume.add(proficiency.skill.category)
+        return Response(all_skill_categories_for_resume)
