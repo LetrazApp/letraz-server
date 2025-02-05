@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from CORE.models import Waitlist
-from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer
+from CORE.models import Waitlist, Skill
+from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer, SkillSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
 from letraz_server import settings
@@ -35,7 +35,8 @@ def health_check(request):
         response = {'status': 'DEGRADED', 'details': {
             'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "DB": settings.DB_STATUS
         }}
-        logger.error(f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}, "DB": {settings.DB_STATUS}>')
+        logger.error(
+            f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}, "DB": {settings.DB_STATUS}>')
         return Response(response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response(response, status=status.HTTP_200_OK)
 
@@ -121,6 +122,31 @@ def waitlist_crud(request):
                     code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
                     details=waitlist_serializer.errors, extra={'data': request.data}
                 ).response
+    except Exception as e:
+        error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(),
+                                       extra={'data': request.data})
+        logger.exception(f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
+        return error_response.response
+
+
+@extend_schema(
+    methods=['GET'],
+    tags=['Resume Skill object'],
+    auth=[],
+    summary="Get all global skills",
+    responses={
+        200: SkillSerializer(many=True),
+        400: ErrorSerializer
+    }
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_all_skill(request):
+    """
+    Get all skills available in the database across users and resumes
+    """
+    try:
+        return Response(SkillSerializer(Skill.objects.all(), many=True).data)
     except Exception as e:
         error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(),
                                        extra={'data': request.data})

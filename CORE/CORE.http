@@ -18,3 +18,6 @@ Content-Type: application/json
     "email": "test2@letraz.app",
     "referrer": "website"
 }
+
+### Get all global skills API
+GET https://{{url}}/api/v1/skills/
