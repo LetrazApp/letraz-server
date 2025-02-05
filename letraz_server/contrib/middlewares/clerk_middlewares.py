@@ -28,7 +28,7 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
     def authenticate(self, request):
         authentication_cookies = request.COOKIES
         authentication_header = request.headers.get('Authorization')
-        if not (authentication_cookies or authentication_header):
+        if not (authentication_cookies.get('__session') or authentication_header):
             return None, None
         try:
             if authentication_cookies.get('__session'):
