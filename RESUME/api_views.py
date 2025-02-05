@@ -2,13 +2,14 @@ import logging
 from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
-    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer
+    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -107,7 +108,8 @@ class EducationViewSets(viewsets.GenericViewSet):
             self.resume = base_resume
         else:
             if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
-                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!', status_code=404).response
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
                 return
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
@@ -128,7 +130,8 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID of the education you want to retrieve', required=False,
+            OpenApiParameter(name='id', description='Education ID of the education you want to retrieve',
+                             required=False,
                              location=OpenApiParameter.PATH, type=str)
         ],
         responses={200: EducationFullSerializer, 500: ErrorSerializer},
@@ -263,7 +266,6 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        tags=['Experience object'],
         responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
         summary="Get all experiences",
     )
@@ -279,7 +281,6 @@ class ExperienceViewSets(viewsets.GenericViewSet):
                         status=status.HTTP_200_OK)
 
     @extend_schema(
-        tags=['Experience object'],
         responses={201: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
         summary="Create a new experience",
     )
@@ -319,9 +320,9 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             return error_response.response
 
     @extend_schema(
-        tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID of the experience you want to retrieve', required=True, type=str,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to retrieve',
+                             required=True, type=str,
                              location=OpenApiParameter.PATH)
         ],
         responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
@@ -346,9 +347,9 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             ).response
 
     @extend_schema(
-        tags=['Experience object'],
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID of the experience you want to delete', required=True, type=str,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to delete', required=True,
+                             type=str,
                              location=OpenApiParameter.PATH)
         ],
         responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
@@ -372,3 +373,192 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         except Experience.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
                                  extra={'experience': experience_id}).response
+
+
+# Skill CRUD ViewSets for a Resume
+@extend_schema(
+    tags=['Resume Skill object'],
+    parameters=[
+        OpenApiParameter(
+            name="resume_id",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
+            required=True,
+        ),
+    ]
+)
+class ResumeSkillViewSets(viewsets.GenericViewSet):
+    """
+    API reference of all available endpoints for the Skill object in an individual resume.
+    Contains endpoints for getting all skills for a resume, create, update and delete specific skill by its ID as well.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.authenticated_user: User | None = None
+        self.resume: Resume | None = None
+        self.error: Response | None = None
+        super(ResumeSkillViewSets, self).__init__(*args, **kwargs)
+
+    def __set_meta(self, request, resume_id: str):
+        """
+        Retrieve check and set authenticated user & resume
+        """
+        # Ownership Check for all types of API
+        self.authenticated_user: User = request.user
+        if resume_id == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+
+    @extend_schema(
+        responses={200: ProficiencySerializer(many=True), 500: ErrorSerializer},
+        summary="Get all skill of the resume",
+    )
+    def list(self, request, resume_id: str) -> Response:
+        """
+        Gives all skill for the Resume id or base if `base`  is provided as resume id
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        return Response(ProficiencySerializer(
+            Proficiency.objects.filter(resume_section__resume=self.resume), many=True).data,
+                        status=status.HTTP_200_OK)
+
+    @extend_schema(
+        responses={201: ProficiencySerializer, 500: ErrorSerializer},
+        summary="Add a new Skill to resume",
+    )
+    def create(self, request, resume_id: str) -> Response:
+        """
+        Adds a new Skill to the user's resume as specified in the resume id.
+        If a base resume id is provided, the Skill is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            return Response(ProficiencySerializer(self.resume.add_skill(
+                skill_name=request.data.get('name'),
+                skill_category=request.data.get('category'),
+                skill_proficiency=request.data.get('level'),
+            )).data)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        responses={200: ProficiencySerializer, 500: ErrorSerializer},
+        summary="Update an existing Skill to resume",
+    )
+    def partial_update(self, request, resume_id: str, pk) -> Response:
+        """
+        Update an existing Skill-proficiency to the user's resume as specified in the resume id.
+        If a base resume id is provided, the Skill is updated for the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            skill_proficiency: Proficiency = Proficiency.objects.filter(
+                resume_section__resume=self.resume, id=pk
+            ).first()
+            name = request.data.get('name', '---')
+            if not name:
+                raise ValueError('Name can not be empty.')
+            category = request.data.get('category', '---')
+            level = request.data.get('level', '---')
+            edited_skill_proficiency = self.resume.edit_skill(
+                proficiency_id=pk,
+                skill_name=skill_proficiency.skill.name if name == '---' else name,
+                skill_category=skill_proficiency.skill.category if category == '---' else category,
+                skill_proficiency=skill_proficiency.level if level == '---' else level,
+            )
+            return Response(ProficiencySerializer(edited_skill_proficiency).data)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        responses={204: None, 500: ErrorSerializer}, summary="Remove skill from resume"
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Deletes a skill-proficiency from the user's resume as specified in the resume id or base resume if `base ids provided as resume id`.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            self.resume.remove_skill(pk)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Experience.DoesNotExist:
+            return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
+                                 extra={'proficiency': pk}).response
+        except ValueError as ve:
+            return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='Invalid proficiency id.',
+                                 extra={'proficiency': pk}).response
+        except Exception as ex:
+            error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                                           details=ex.__str__(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f'{error_response.uuid} -> Unexpected exception occurred: {ex.__str__()}')
+            return error_response.response
+
+    @extend_schema(
+        responses={200: serializers.ListSerializer(child=serializers.CharField()), 500: ErrorSerializer},
+        summary="Get all skill category for the resume"
+    )
+    @action(detail=False, methods=['get'], url_path='categories')
+    def get_featured_resumes(self, request, resume_id: str) -> Response:
+        """
+        Get all skill category for the resume
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        all_skill_proficiencies_for_resume: QuerySet[Proficiency] = Proficiency.objects.filter(
+            resume_section__resume=self.resume
+        )
+        all_skill_categories_for_resume: set[str] = set()
+        proficiency: Proficiency
+        for proficiency in all_skill_proficiencies_for_resume:
+            if not proficiency.skill.category:
+                continue
+            all_skill_categories_for_resume.add(proficiency.skill.category)
+        return Response(all_skill_categories_for_resume)

@@ -39,3 +39,22 @@ class Country(models.Model):
 
     def __str__(self):
         return f'{self.name} [{self.code}]'
+
+
+class Skill(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
+                          help_text='The unique identifier for the experience entry.')
+    category = models.CharField(max_length=50, blank=True, null=True,
+                                help_text='The category of the skill. (optional)')
+    name = models.CharField(max_length=250, help_text='The name of the skill.')
+    preferred = models.BooleanField(default=False)
+    alias = models.ManyToManyField('Skill', blank=True, related_name='alias_skills')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='The date and time the skill entry was created.')
+    updated_at = models.DateTimeField(auto_now=True,
+                                      help_text='The date and time the skill entry was last updated.')
+
+    class Meta:
+        unique_together = ('category', 'name')
+
+    def __str__(self):
+        return f'{self.name} [{self.category}]'

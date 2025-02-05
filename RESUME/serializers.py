@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
-from CORE.serializers import CountrySerializer
+from CORE.serializers import CountrySerializer, SkillSerializer
 from JOB.serializers import JobShortSerializer, JobFullSerializer
 from PROFILE.serializers import UserSerializer
-from RESUME.models import Resume, ResumeSection, Education, Experience
+from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency
 
 
 class ResumeShortSerializer(serializers.ModelSerializer):
@@ -115,3 +115,11 @@ class ExperienceUpsertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Experience
         fields = '__all__'
+
+
+class ProficiencySerializer(serializers.ModelSerializer):
+    skill = SkillSerializer()
+
+    class Meta:
+        model = Proficiency
+        fields = ('id', 'skill', 'resume_section', 'level')

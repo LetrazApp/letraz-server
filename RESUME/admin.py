@@ -1,6 +1,5 @@
 from django.contrib import admin
-
-from RESUME.models import Resume, Education, Experience, ResumeSection, Skill, Proficiency
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency
 
 
 # Register your models here.
@@ -27,11 +26,6 @@ class EducationAdmin(admin.ModelAdmin):
 class ExperienceAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'company_name', 'job_title')
     list_filter = ('employment_type', 'current',)
-
-
-@admin.register(Skill)
-class SkillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'category', 'name')
 
 
 @admin.register(Proficiency)
