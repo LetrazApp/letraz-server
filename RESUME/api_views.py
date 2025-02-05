@@ -437,22 +437,22 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new Skill to the user's resume as specified in the resume id.
-        If a base resume id is provided, the experience is added to the base resume.
+        If a base resume id is provided, the Skill is added to the base resume.
         """
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
         try:
-            if not str(request.data.get('level')) in Proficiency.Level.values:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST, message='Invalid proficiency level.',
-                    extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
-                ).response
             return Response(ProficiencySerializer(self.resume.add_skill(
-                skill_name=str(request.data.get('name')),
-                skill_category=str(request.data.get('category')),
-                skill_proficiency=str(request.data.get('level')),
+                skill_name=request.data.get('name'),
+                skill_category=request.data.get('category'),
+                skill_proficiency=request.data.get('level'),
             )).data)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
         except Exception as e:
             error_response: ErrorResponse = ErrorResponse(
                 code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
@@ -462,3 +462,77 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
             logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
             return error_response.response
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume', required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        responses={200: ProficiencySerializer, 500: ErrorSerializer},
+        summary="Update an existing Skill to resume",
+    )
+    def partial_update(self, request, resume_id: str, pk) -> Response:
+        """
+        Update an existing Skill-proficiency to the user's resume as specified in the resume id.
+        If a base resume id is provided, the Skill is updated for the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            skill_proficiency: Proficiency = Proficiency.objects.filter(
+                resume_section__resume=self.resume, id=pk
+            ).first()
+            name = request.data.get('name', '---')
+            if not name:
+                raise ValueError('Name can not be empty.')
+            category = request.data.get('category', '---')
+            level = request.data.get('level', '---')
+            edited_skill_proficiency = self.resume.edit_skill(
+                proficiency_id=pk,
+                skill_name=skill_proficiency.skill.name if name == '---' else name,
+                skill_category=skill_proficiency.skill.category if category == '---' else category,
+                skill_proficiency=skill_proficiency.level if level == '---' else level,
+            )
+            return Response(ProficiencySerializer(edited_skill_proficiency).data)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume', required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Deletes a skill-proficiency from the user's resume as specified in the resume id or base resume if `base ids provided as resume id`.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            self.resume.remove_skill(pk)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Experience.DoesNotExist:
+            return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
+                                 extra={'proficiency': pk}).response
+        except ValueError as ve:
+            return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='Invalid proficiency id.',
+                                 extra={'proficiency': pk}).response
+        except Exception as ex:
+            error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                                           details=ex.__str__(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f'{error_response.uuid} -> Unexpected exception occurred: {ex.__str__()}')
+            return error_response.response

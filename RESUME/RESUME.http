@@ -1,4 +1,4 @@
-### Resume ###
+## Resume ##
 ### GET All Resume for user API
 GET https://{{url}}/api/v1/resume/
 Cookie: __session={{token}}
@@ -11,7 +11,7 @@ Cookie: __session={{token}}
 GET https://{{url}}/api/v1/resume/base/
 Cookie: __session={{token}}
 
-### Education ###
+## Education ##
 ### GET All Education by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/education/
 Cookie: __session={{token}}
@@ -42,7 +42,7 @@ Content-Type: application/json
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/education/{{education_id}}/
 Cookie: __session={{token}}
 
-### Experience ###
+## Experience ##
 ### GET All Experience by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/experience/
 Cookie: __session={{token}}
@@ -76,12 +76,12 @@ DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
 Cookie: __session={{token}}
 
 
-### SKILL ###
-### GET All Skill by resume id API
+## SKILL ##
+### GET All Skill of the resumeAPI
 GET https://{{url}}/api/v1/resume/{{resume_id}}/skill/
 Cookie: __session={{token}}
 
-### GET Skill by id & resume id API
+### Add Skill to resume API
 POST https://{{url}}/api/v1/resume/{{resume_id}}/skill/
 Cookie: __session={{token}}
 Content-Type: application/json
@@ -91,3 +91,16 @@ Content-Type: application/json
     "category": "Frontend",
     "level": "EXP"
 }
+
+### Update Skill in resume API
+PATCH https://{{url}}/api/v1/resume/{{resume_id}}/skill/3a79e75d-23bd-48e2-8520-95793ddf4ff8/
+Cookie: __session={{token}}
+Content-Type: application/json
+
+{
+    "name": "Python"
+}
+
+### Remove Skill from resume API
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/skill/{{skill_id}}/
+Cookie: __session={{token}}

@@ -72,26 +72,37 @@ class Resume(models.Model):
     def add_skill(self, skill_name, skill_category=None, skill_proficiency=None):
         skill: Skill
         skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
-        try:
-            resume_skill_section: ResumeSection = self.get_skill_resume_section()
-            proficiency: Proficiency
-            proficiency, created = resume_skill_section.proficiency_set.get_or_create(skill=skill)
-            if skill_proficiency:
-                proficiency.level = skill_proficiency
-            proficiency.save()
-            return proficiency
-        except Exception as ex:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected Error occurred.', details=ex.__str__(),
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            logging.exception(f'UUID -> {error_response.uuid} | Exception occurred: {ex.__str__()}')
-            return error_response.response
+        resume_skill_section: ResumeSection = self.get_skill_resume_section()
+        proficiency: Proficiency
+        proficiency, created = resume_skill_section.proficiency_set.get_or_create(skill=skill)
+        if skill_proficiency:
+            if str(skill_proficiency) not in Proficiency.Level.values:
+                raise ValueError('Invalid proficiency level.')
+            proficiency.level = skill_proficiency
+        else:
+            proficiency.level = None
+        proficiency.save()
+        return proficiency
+
+    def edit_skill(self, proficiency_id, skill_name, skill_category, skill_proficiency):
+        resume_skill_section: ResumeSection = self.get_skill_resume_section()
+        proficiency: Proficiency
+        proficiency = resume_skill_section.proficiency_set.get(id=proficiency_id)
+        category_of_skill = skill_category
+        skill: Skill
+        skill, created = Skill.objects.get_or_create(name=skill_name, category=category_of_skill)
+        proficiency.skill = skill
+        if skill_proficiency and skill_proficiency not in Proficiency.Level.values:
+            raise ValueError(f'Invalid proficiency level: `{skill_proficiency}`')
+        proficiency.level = skill_proficiency
+        proficiency.save()
+        return proficiency
 
     def remove_skill(self, proficiency_id):
         skill_resume_section: ResumeSection = self.get_skill_resume_section()
         proficiency: Proficiency
         for proficiency in skill_resume_section.proficiency_set.all():
-            if proficiency.id == proficiency_id:
+            if str(proficiency.id) == str(proficiency_id):
                 proficiency.delete()
                 return True
         else:
@@ -220,7 +231,7 @@ class Proficiency(models.Model):
                           help_text='The unique identifier for the experience entry.')
     skill = models.ForeignKey(Skill, models.CASCADE, null=False, blank=False)
     resume_section = models.ForeignKey(ResumeSection, models.CASCADE, null=False, blank=False)
-    level = models.CharField(max_length=3, choices=Level.choices, null=False, blank=False)
+    level = models.CharField(max_length=3, choices=Level.choices, null=True)
 
     def __str__(self):
         return f'{self.skill.name} [{self.skill.category}] - {self.get_level_display()}'
