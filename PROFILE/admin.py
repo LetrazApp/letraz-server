@@ -6,7 +6,7 @@ from PROFILE.models import User
 @admin.register(User)
 class UserInfoAdmin(admin.ModelAdmin):
     list_display = ('id', 'get_full_name', 'email', 'city', 'nationality')
-
+    search_fields = ('id', 'first_name', 'last_name', 'email', 'phone')
     def get_full_name(self, obj: User) -> str:
         return obj.get_full_name()
 

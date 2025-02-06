@@ -2,13 +2,13 @@ import logging
 import uuid
 from django.db import models
 from django.db.models import Q
-from rest_framework import status
-from letraz_server.contrib.constant import ErrorCode
+from django.core.validators import MinValueValidator, MaxValueValidator
 from CORE.models import Country, Skill
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
 
+from letraz_server import settings
 from letraz_server.contrib.error_framework import ErrorResponse
 
 
@@ -120,10 +120,8 @@ class ResumeSection(models.Model):
         Others = 'oth'
 
     id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        help_text='The unique identifier for the resume section entry.'
+        primary_key=True, default=uuid.uuid4,
+        editable=False, help_text='The unique identifier for the resume section entry.'
     )
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, help_text='The resume the section belongs to.')
     index = models.IntegerField(
@@ -158,14 +156,14 @@ class Education(models.Model):
                               help_text='The degree the user obtained. (optional)')
     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True,
                                 help_text='The country the institution is located in. (optional)')
-    started_from_month = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                          help_text='The month the user started studying. (optional)')
-    started_from_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                         help_text='The year the user started studying. (optional)')
-    finished_at_month = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                         help_text='The month the user finished studying. (optional)')
-    finished_at_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                        help_text='The year the user finished studying. (optional)')
+    started_from_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                             null=True, help_text="Month when the education started (1-12).")
+    started_from_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                            null=True, help_text="Year when the education started (YYYY).")
+    finished_at_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                            null=True, help_text="Month when the education was completed (1-12).")
+    finished_at_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                           null=True, help_text="Year when the education was completed (YYYY).")
     current = models.BooleanField(default=False, help_text='Whether the user is currently studying. default: False')
     description = models.TextField(max_length=3000, null=True, blank=True,
                                    help_text='The description of the education entry. User can provide any kind of description for that user. Usually in HTML format to support rich text. (optional)')  # TODO: May need to change the length
@@ -200,14 +198,14 @@ class Experience(models.Model):
                             help_text='The city the company is located in. (optional)')
     country = models.ForeignKey(Country, on_delete=models.CASCADE, blank=True, null=True,
                                 help_text='The country the company is located in. (optional)')
-    started_from_month = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                          help_text='The month the user started working.')
-    started_from_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                         help_text='The year the user started working.')
-    finished_at_month = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                         help_text='The month the user finished working. (optional)')
-    finished_at_year = models.PositiveSmallIntegerField(null=True, blank=True,
-                                                        help_text='The year the user finished working. (optional)')
+    started_from_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                             null=True, help_text="Month when the experience started (1-12).")
+    started_from_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                            null=True, help_text="Year when the experience started (YYYY).")
+    finished_at_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                            null=True, help_text="Month when the experience was completed (1-12).")
+    finished_at_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                           null=True, help_text="Year when the experience was completed (YYYY).")
     current = models.BooleanField(default=False, help_text='Whether the user is currently working. default: False')
     description = models.TextField(max_length=3000, null=True, blank=True,
                                    help_text='The description of the experience entry. User can provide any kind of description for that user. Usually in HTML format to support rich text. (optional)')  # TODO: May need to change the length
@@ -235,3 +233,38 @@ class Proficiency(models.Model):
 
     def __str__(self):
         return f'{self.skill.name} [{self.skill.category}] - {self.get_level_display()}'
+
+
+class Project(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
+                          help_text="Unique identifier for the project")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             help_text="The user who owns this project")
+    category = models.CharField(max_length=255, blank=True, null=True,
+                                help_text="Category or type of the project (e.g., Web Development, Mobile App).")
+    name = models.CharField(max_length=255, help_text="Name of the project.")
+    description = models.TextField(blank=True, null=True,
+                                   help_text="Detailed description of the project and its objectives.")
+    skills_used = models.ManyToManyField(Skill, related_name='skills_used', blank=True,
+                                         help_text="Technical skills and technologies used in this project.")
+    role = models.CharField(max_length=255, blank=True, null=True,
+                            help_text="Your role or position in this project (e.g., Lead Developer, UI Designer).")
+    github_url = models.URLField(blank=True, null=True, help_text="Link to the project's GitHub repository.")
+    live_url = models.URLField(blank=True, null=True, help_text="Link to the live/deployed version of the project.")
+    started_from_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                             null=True, help_text="Month when the project started (1-12).")
+    started_from_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                            null=True, help_text="Year when the project started (YYYY).")
+    finished_at_month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)], blank=True,
+                                            null=True, help_text="Month when the project was completed (1-12).")
+    finished_at_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)], blank=True,
+                                           null=True, help_text="Year when the project was completed (YYYY).")
+    current = models.BooleanField(blank=True, null=True, help_text="Indicates if this is a current/ongoing project.")
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when the project was first created.")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when the project was last updated.")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['-created_at']
