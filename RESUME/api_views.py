@@ -1,3 +1,4 @@
+import json
 import logging
 from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
@@ -10,7 +11,7 @@ from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
-    ProjectSerializer, ResumeSkillUpsertSerializer
+    ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -623,3 +624,52 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
         return Response(ProjectSerializer(
             Project.objects.filter(resume_section__resume=self.resume), many=True).data,
                         status=status.HTTP_200_OK)
+
+    @extend_schema(
+        request=ProjectUpsertSerializer,
+        responses={201: ProjectSerializer, 500: ErrorSerializer},
+        summary="Add a new project to resume",
+    )
+    def create(self, request, resume_id: str) -> Response:
+        """
+        Adds a new project to the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            payload: dict = request.data
+            skill_used: list[dict] = payload.get('skills_used')
+            if payload.get('skills_used'):
+                del payload['skills_used']
+            new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
+            payload['resume_section'] = new_resume_section.id
+            payload['user'] = self.authenticated_user.id
+            print(payload)
+            project_ser: ProjectUpsertSerializer = ProjectUpsertSerializer(data=payload)
+            if project_ser.is_valid():
+                new_project: Project = project_ser.save()
+                for skill_dict in skill_used:
+                    new_project.add_skill(skill_name=skill_dict.get('name'), skill_category=skill_dict.get('category'))
+                return Response(ProjectSerializer(new_project).data)
+            else:
+                if new_resume_section:
+                    new_resume_section.delete()
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=project_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
