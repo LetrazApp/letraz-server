@@ -646,12 +646,13 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
             payload['resume_section'] = new_resume_section.id
             payload['user'] = self.authenticated_user.id
-            print(payload)
             project_ser: ProjectUpsertSerializer = ProjectUpsertSerializer(data=payload)
             if project_ser.is_valid():
                 new_project: Project = project_ser.save()
-                for skill_dict in skill_used:
-                    new_project.add_skill(skill_name=skill_dict.get('name'), skill_category=skill_dict.get('category'))
+                if type(skill_used) is type(list()):
+                    for skill_dict in skill_used:
+                        new_project.add_skill(skill_name=skill_dict.get('name'),
+                                              skill_category=skill_dict.get('category'))
                 return Response(ProjectSerializer(new_project).data)
             else:
                 if new_resume_section:
@@ -709,17 +710,60 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                 if not request.data.get('skills_used', '---') == '---':
                     updated_project.skills_used.clear()
                     updated_project.save()
-                for skill_dict in skill_used:
-                    if not skill_dict.get('name'):
-                        continue
-                    updated_project.add_skill(skill_name=skill_dict.get('name'), skill_category=skill_dict.get('category'))
-
+                if type(skill_used) is type(list()):
+                    for skill_dict in skill_used:
+                        if not skill_dict.get('name'):
+                            continue
+                        updated_project.add_skill(skill_name=skill_dict.get('name'),
+                                                  skill_category=skill_dict.get('category'))
                 return Response(ProjectSerializer(updated_project).data)
             else:
                 return ErrorResponse(
                     code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
                     details=project_ser.errors, extra={'data': request.data}
                 ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the project that you want to delete',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=ProjectUpsertSerializer,
+        responses={200: ProjectSerializer, 500: ErrorSerializer},
+        summary="Delete a project",
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Delete an existing project of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Project.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                ).response
+            existing_project: Project = Project.objects.get(id=pk)
+            parent_resume_section: ResumeSection = existing_project.resume_section
+            existing_project.delete()
+            parent_resume_section.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except ValueError as ve:
             return ErrorResponse(
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
