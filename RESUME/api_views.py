@@ -381,7 +381,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
 # Skill CRUD ViewSets for a Resume
 @extend_schema(
-    tags=['Resume Skill object'],
+    tags=['Skill object'],
     parameters=[
         OpenApiParameter(
             name="resume_id",
@@ -571,7 +571,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
 # Project CRUD ViewSets for a Resume
 @extend_schema(
-    tags=['Resume Project object'],
+    tags=['Project object'],
     parameters=[
         OpenApiParameter(
             name="resume_id",
@@ -743,7 +743,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                              type=str, location=OpenApiParameter.PATH)
         ],
         request=ProjectUpsertSerializer,
-        responses={200: ProjectSerializer, 500: ErrorSerializer},
+        responses={200: None, 500: ErrorSerializer},
         summary="Delete a project",
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:

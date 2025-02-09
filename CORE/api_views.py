@@ -131,7 +131,7 @@ def waitlist_crud(request):
 
 @extend_schema(
     methods=['GET'],
-    tags=['Resume Skill object'],
+    tags=['Skill object'],
     auth=[],
     summary="Get all global skills",
     responses={

@@ -160,7 +160,14 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class SkillUpsertSerializer(serializers.Serializer):
+    name = serializers.CharField(help_text='The name of the skill.')
+    category = serializers.CharField(help_text='The category of the skill.')
+
+
 class ProjectUpsertSerializer(serializers.ModelSerializer):
+    skills_used = SkillUpsertSerializer(many=True)
+
     class Meta:
         model = Project
-        fields = "__all__"
+        exclude = ('user', 'resume_section')
