@@ -10,7 +10,7 @@ from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
-    ProjectSerializer
+    ProjectSerializer, ResumeSkillUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -157,6 +157,7 @@ class EducationViewSets(viewsets.GenericViewSet):
             ).response
 
     @extend_schema(
+        request=EducationUpsertSerializer,
         responses={200: EducationFullSerializer, 500: ErrorSerializer},
         summary="Add a new education"
     )
@@ -282,6 +283,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
                         status=status.HTTP_200_OK)
 
     @extend_schema(
+        request=ExperienceUpsertSerializer,
         responses={201: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
         summary="Create a new experience",
     )
@@ -433,13 +435,14 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                         status=status.HTTP_200_OK)
 
     @extend_schema(
+        request=ResumeSkillUpsertSerializer,
         responses={201: ProficiencySerializer, 500: ErrorSerializer},
         summary="Add a new Skill to resume",
     )
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new Skill to the user's resume as specified in the resume id.
-        If a base resume id is provided, the Skill is added to the base resume.
+        If a `base` is provided as resume id, the Skill is added to the base resume.
         """
         self.__set_meta(request, resume_id)
         if self.error:
@@ -607,8 +610,8 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: ProficiencySerializer(many=True), 500: ErrorSerializer},
-        summary="Get all skill of the resume",
+        responses={200: ProjectSerializer(many=True), 500: ErrorSerializer},
+        summary="Get all project of the resume",
     )
     def list(self, request, resume_id: str) -> Response:
         """

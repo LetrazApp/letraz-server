@@ -140,6 +140,16 @@ class ProficiencySerializer(serializers.ModelSerializer):
         fields = ('id', 'skill', 'resume_section', 'level')
 
 
+class ResumeSkillUpsertSerializer(serializers.Serializer):
+    LEVEL_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('DEGRADED', 'DEGRADED')
+    ]
+    name = serializers.CharField(help_text='The name of the skill.')
+    category = serializers.CharField(help_text='The category of the skill.')
+    level = serializers.ChoiceField(Proficiency.Level.choices, help_text='The proficiency level of the skill.')
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     skills_used = SkillSerializer(many=True)
     resume_section = ResumeSectionShortSerializer()
