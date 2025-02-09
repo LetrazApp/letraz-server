@@ -54,7 +54,7 @@ class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at', 'id')
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'name', 'description', 'category', 'user')
+            'fields': ('id', 'name', 'description', 'category', 'user', 'resume_section')
         }),
         ('Project Details', {
             'fields': ('role', 'skills_used', 'current')

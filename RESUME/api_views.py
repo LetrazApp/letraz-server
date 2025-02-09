@@ -1,3 +1,4 @@
+import json
 import logging
 from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
@@ -7,9 +8,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
-    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer
+    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
+    ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -156,6 +158,7 @@ class EducationViewSets(viewsets.GenericViewSet):
             ).response
 
     @extend_schema(
+        request=EducationUpsertSerializer,
         responses={200: EducationFullSerializer, 500: ErrorSerializer},
         summary="Add a new education"
     )
@@ -281,6 +284,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
                         status=status.HTTP_200_OK)
 
     @extend_schema(
+        request=ExperienceUpsertSerializer,
         responses={201: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
         summary="Create a new experience",
     )
@@ -377,13 +381,13 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
 # Skill CRUD ViewSets for a Resume
 @extend_schema(
-    tags=['Resume Skill object'],
+    tags=['Skill object'],
     parameters=[
         OpenApiParameter(
             name="resume_id",
             type=OpenApiTypes.STR,
             location=OpenApiParameter.PATH,
-            description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base Skill, just put `base` in here",
             required=True,
         ),
     ]
@@ -418,7 +422,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         responses={200: ProficiencySerializer(many=True), 500: ErrorSerializer},
-        summary="Get all skill of the resume",
+        summary="Get all skills of resume",
     )
     def list(self, request, resume_id: str) -> Response:
         """
@@ -432,13 +436,14 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                         status=status.HTTP_200_OK)
 
     @extend_schema(
+        request=ResumeSkillUpsertSerializer,
         responses={201: ProficiencySerializer, 500: ErrorSerializer},
-        summary="Add a new Skill to resume",
+        summary="Add a new skill",
     )
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new Skill to the user's resume as specified in the resume id.
-        If a base resume id is provided, the Skill is added to the base resume.
+        If a `base` is provided as resume id, the Skill is added to the base resume.
         """
         self.__set_meta(request, resume_id)
         if self.error:
@@ -470,7 +475,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                              type=str, location=OpenApiParameter.PATH)
         ],
         responses={200: ProficiencySerializer, 500: ErrorSerializer},
-        summary="Update an existing Skill to resume",
+        summary="Update an existing skill",
     )
     def partial_update(self, request, resume_id: str, pk) -> Response:
         """
@@ -562,3 +567,213 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                 continue
             all_skill_categories_for_resume.add(proficiency.skill.category)
         return Response(all_skill_categories_for_resume)
+
+
+# Project CRUD ViewSets for a Resume
+@extend_schema(
+    tags=['Project object'],
+    parameters=[
+        OpenApiParameter(
+            name="resume_id",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base project, just put `base` in here",
+            required=True,
+        ),
+    ]
+)
+class ResumeProjectViewSets(viewsets.GenericViewSet):
+    """
+    API reference of all available endpoints for the Projects object in an individual resume.
+    Contains endpoints for getting all projects for a resume, create, update and delete specific skill by its ID as well.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.authenticated_user: User | None = None
+        self.resume: Resume | None = None
+        self.error: Response | None = None
+        super(ResumeProjectViewSets, self).__init__(*args, **kwargs)
+
+    def __set_meta(self, request, resume_id: str):
+        """
+        Retrieve check and set authenticated user & resume
+        """
+        # Ownership Check for all types of API
+        self.authenticated_user: User = request.user
+        if resume_id == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+
+    @extend_schema(
+        responses={200: ProjectSerializer(many=True), 500: ErrorSerializer},
+        summary="Get all projects",
+    )
+    def list(self, request, resume_id: str) -> Response:
+        """
+        Gives all projects for the Resume id or base if `base`  is provided as resume id
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        return Response(ProjectSerializer(
+            Project.objects.filter(resume_section__resume=self.resume), many=True).data,
+                        status=status.HTTP_200_OK)
+
+    @extend_schema(
+        request=ProjectUpsertSerializer,
+        responses={201: ProjectSerializer, 500: ErrorSerializer},
+        summary="Create a new project",
+    )
+    def create(self, request, resume_id: str) -> Response:
+        """
+        Adds a new project to the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            payload: dict = request.data
+            skill_used: list[dict] = payload.get('skills_used')
+            if payload.get('skills_used'):
+                del payload['skills_used']
+            new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
+            payload['resume_section'] = new_resume_section.id
+            payload['user'] = self.authenticated_user.id
+            project_ser: ProjectUpsertSerializer = ProjectUpsertSerializer(data=payload)
+            if project_ser.is_valid():
+                new_project: Project = project_ser.save()
+                if type(skill_used) is type(list()):
+                    for skill_dict in skill_used:
+                        new_project.add_skill(skill_name=skill_dict.get('name'),
+                                              skill_category=skill_dict.get('category'))
+                return Response(ProjectSerializer(new_project).data)
+            else:
+                if new_resume_section:
+                    new_resume_section.delete()
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=project_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the project that you want to update',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=ProjectUpsertSerializer,
+        responses={200: ProjectSerializer, 500: ErrorSerializer},
+        summary="Update a project",
+    )
+    def partial_update(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Updates an existing project of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Project.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                ).response
+            existing_project: Project = Project.objects.get(id=pk)
+            payload: dict = request.data.copy()
+            skill_used: list[dict] = payload.get('skills_used')
+            if payload.get('skills_used'):
+                del payload['skills_used']
+            payload['user'] = self.authenticated_user.id
+            project_ser: ProjectUpsertSerializer = ProjectUpsertSerializer(existing_project, data=payload, partial=True)
+            if project_ser.is_valid():
+                updated_project: Project = project_ser.save()
+                if not request.data.get('skills_used', '---') == '---':
+                    updated_project.skills_used.clear()
+                    updated_project.save()
+                if type(skill_used) is type(list()):
+                    for skill_dict in skill_used:
+                        if not skill_dict.get('name'):
+                            continue
+                        updated_project.add_skill(skill_name=skill_dict.get('name'),
+                                                  skill_category=skill_dict.get('category'))
+                return Response(ProjectSerializer(updated_project).data)
+            else:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=project_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the project that you want to delete',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=ProjectUpsertSerializer,
+        responses={200: None, 500: ErrorSerializer},
+        summary="Delete a project",
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Delete an existing project of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Project.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                ).response
+            existing_project: Project = Project.objects.get(id=pk)
+            parent_resume_section: ResumeSection = existing_project.resume_section
+            existing_project.delete()
+            parent_resume_section.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response

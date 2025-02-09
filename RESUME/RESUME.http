@@ -108,3 +108,71 @@ Cookie: __session={{token}}
 ### Get all categories Skill-proficiency for resume API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/skill/categories/
 Cookie: __session={{token}}
+
+## Project ##
+### GET all Project of the resumeAPI
+GET https://{{url}}/api/v1/resume/{{resume_id}}/project/
+Cookie: __session={{token}}
+
+### Add Project to resume API
+POST https://{{url}}/api/v1/resume/{{resume_id}}/project/
+Cookie: __session={{token}}
+Content-Type: application/json
+
+{
+    "skills_used": [
+        {
+            "category": "Frontend",
+            "name": "Next.js"
+        },
+        {
+            "category": "Backend",
+            "name": "Ruby on Rails"
+        }
+    ],
+    "category": "Forex Trading",
+    "name": "Banking system for CITI Bank",
+    "description": "Worked in foreign-exchange system development project for a US based multinational banking client Effectively communicated with the client to understand business requirements and transformed them into technical requirements Developed the Forex system with REST API based Java Spring Boot microservice architecture Handled transformation of large datasets and ingestion in Kafka with python (django)",
+    "role": "Assosiate Insultant",
+    "github_url": "https://letraz.app",
+    "live_url": "https://subhajit.lol",
+    "started_from_month": 1,
+    "started_from_year": 2021,
+    "finished_at_month": 11,
+    "finished_at_year": 2022,
+    "current": false
+}
+
+### Update a Project by id
+PATCH https://{{url}}/api/v1/resume/{{resume_id}}/project/
+Cookie: __session={{token}}
+Content-Type: application/json
+
+{
+    "skills_used": [
+        {
+            "category": "Frontend",
+            "name": "Next.js"
+        },
+        {
+            "category": "Backend",
+            "name": "Ruby on Rails"
+        }
+    ],
+    "category": "Forex Trading",
+    "name": "Banking system for CITI Bank",
+    "description": "Worked in foreign-exchange system development project for a US based multinational banking client Effectively communicated with the client to understand business requirements and transformed them into technical requirements Developed the Forex system with REST API based Java Spring Boot microservice architecture Handled transformation of large datasets and ingestion in Kafka with python (django)",
+    "role": "Assosiate Insultant",
+    "github_url": "https://letraz.app",
+    "live_url": "https://subhajit.lol",
+    "started_from_month": 1,
+    "started_from_year": 2021,
+    "finished_at_month": 11,
+    "finished_at_year": 2022,
+    "current": false
+}
+
+### Delete a Project by id
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/project/
+Cookie: __session={{token}}
+Content-Type: application/json

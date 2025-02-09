@@ -109,7 +109,7 @@ class Resume(models.Model):
             raise ValueError
 
     def __str__(self):
-        return f'{self.id} [{self.user.get_full_name()}]'
+        return f'{"[Base] " if self.base else None}{self.id} [{self.user.get_full_name()}]'
 
 
 class ResumeSection(models.Model):
@@ -117,6 +117,8 @@ class ResumeSection(models.Model):
         Education = 'edu'
         Experience = 'exp'
         Skill = 'skl'
+        Project = 'prj'
+        Certification = 'crt'
         Others = 'oth'
 
     id = models.UUIDField(
@@ -240,6 +242,7 @@ class Project(models.Model):
                           help_text="Unique identifier for the project")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                              help_text="The user who owns this project")
+    resume_section = models.OneToOneField(ResumeSection, on_delete=models.CASCADE)
     category = models.CharField(max_length=255, blank=True, null=True,
                                 help_text="Category or type of the project (e.g., Web Development, Mobile App).")
     name = models.CharField(max_length=255, help_text="Name of the project.")
@@ -268,3 +271,11 @@ class Project(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    def add_skill(self, skill_name, skill_category=None):
+        skill: Skill
+        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
+        self.skills_used.add(skill)
+        self.save()
+        self.resume_section.resume.add_skill(skill_name, skill_category)
+        return skill
