@@ -673,3 +673,63 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             )
             logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
             return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the project that you want to update',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=ProjectUpsertSerializer,
+        responses={200: ProjectSerializer, 500: ErrorSerializer},
+        summary="Update a project",
+    )
+    def partial_update(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Updates an existing project of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the Project is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Project.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                ).response
+            existing_project: Project = Project.objects.get(id=pk)
+            payload: dict = request.data.copy()
+            skill_used: list[dict] = payload.get('skills_used')
+            if payload.get('skills_used'):
+                del payload['skills_used']
+            payload['user'] = self.authenticated_user.id
+            project_ser: ProjectUpsertSerializer = ProjectUpsertSerializer(existing_project, data=payload, partial=True)
+            if project_ser.is_valid():
+                updated_project: Project = project_ser.save()
+                if not request.data.get('skills_used', '---') == '---':
+                    updated_project.skills_used.clear()
+                    updated_project.save()
+                for skill_dict in skill_used:
+                    if not skill_dict.get('name'):
+                        continue
+                    updated_project.add_skill(skill_name=skill_dict.get('name'), skill_category=skill_dict.get('category'))
+
+                return Response(ProjectSerializer(updated_project).data)
+            else:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=project_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
