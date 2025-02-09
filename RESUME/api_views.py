@@ -7,9 +7,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
-    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer
+    ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
+    ProjectSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -383,7 +384,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             name="resume_id",
             type=OpenApiTypes.STR,
             location=OpenApiParameter.PATH,
-            description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base Skill, just put `base` in here",
             required=True,
         ),
     ]
@@ -562,3 +563,60 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                 continue
             all_skill_categories_for_resume.add(proficiency.skill.category)
         return Response(all_skill_categories_for_resume)
+
+
+# Project CRUD ViewSets for a Resume
+@extend_schema(
+    tags=['Resume Project object'],
+    parameters=[
+        OpenApiParameter(
+            name="resume_id",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description="Resume ID of the resume the education belongs to. If you want to interact with the base project, just put `base` in here",
+            required=True,
+        ),
+    ]
+)
+class ResumeProjectViewSets(viewsets.GenericViewSet):
+    """
+    API reference of all available endpoints for the Projects object in an individual resume.
+    Contains endpoints for getting all projects for a resume, create, update and delete specific skill by its ID as well.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.authenticated_user: User | None = None
+        self.resume: Resume | None = None
+        self.error: Response | None = None
+        super(ResumeProjectViewSets, self).__init__(*args, **kwargs)
+
+    def __set_meta(self, request, resume_id: str):
+        """
+        Retrieve check and set authenticated user & resume
+        """
+        # Ownership Check for all types of API
+        self.authenticated_user: User = request.user
+        if resume_id == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+
+    @extend_schema(
+        responses={200: ProficiencySerializer(many=True), 500: ErrorSerializer},
+        summary="Get all skill of the resume",
+    )
+    def list(self, request, resume_id: str) -> Response:
+        """
+        Gives all projects for the Resume id or base if `base`  is provided as resume id
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        return Response(ProjectSerializer(
+            Project.objects.filter(resume_section__resume=self.resume), many=True).data,
+                        status=status.HTTP_200_OK)

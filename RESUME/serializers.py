@@ -3,7 +3,7 @@ from rest_framework import serializers
 from CORE.serializers import CountrySerializer, SkillSerializer
 from JOB.serializers import JobShortSerializer, JobFullSerializer
 from PROFILE.serializers import UserSerializer
-from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency
+from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency, Project
 
 
 class ResumeShortSerializer(serializers.ModelSerializer):
@@ -61,8 +61,23 @@ class ResumeSectionFullSerializer(serializers.ModelSerializer):
             return EducationFullSerializer(resume_section.education).data
         elif resume_section.type == ResumeSection.ResumeSectionType.Experience:
             return ExperienceFullSerializer(resume_section.experience).data
+        elif resume_section.type == ResumeSection.ResumeSectionType.Project:
+            return ProjectSerializer(resume_section.project).data
         else:
             return None
+
+
+class ResumeSectionShortSerializer(serializers.ModelSerializer):
+    type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ResumeSection
+        fields = ('id', 'resume', 'index', 'type')
+        read_only_fields = ['id']
+
+    @staticmethod
+    def get_type(resume_section: ResumeSection):
+        return resume_section.get_type_display()
 
 
 class EducationFullSerializer(serializers.ModelSerializer):
@@ -123,3 +138,14 @@ class ProficiencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Proficiency
         fields = ('id', 'skill', 'resume_section', 'level')
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    skills_used = SkillSerializer(many=True)
+    resume_section = ResumeSectionShortSerializer()
+
+    class Meta:
+        model = Project
+        # fields = ('id', 'skill', 'resume_section', 'level')
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
