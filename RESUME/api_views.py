@@ -199,6 +199,56 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
+            OpenApiParameter(name='id', description='Education ID of the education you want to update', required=False,
+                             location=OpenApiParameter.PATH, type=str)
+        ],
+        request=EducationUpsertSerializer,
+        responses={200: EducationFullSerializer, 500: ErrorSerializer},
+        summary="Update an education"
+    )
+    def partial_update(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Updates an existing education entry from the user's resume as specified in the resume id.
+        If a base is provided as the resume_id, the education is updated in the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not self.authenticated_user.education_set.filter(
+                id=pk, resume_section__resume=self.resume
+            ).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Education not found!', details={'education': pk}
+                ).response
+            
+            existing_education: Education = self.authenticated_user.education_set.get(
+                id=pk, resume_section__resume=self.resume
+            )
+            payload = request.data.copy()
+            payload['user'] = self.authenticated_user.id
+            payload['resume_section'] = existing_education.resume_section.id
+            
+            education_ser = EducationUpsertSerializer(existing_education, data=payload, partial=True)
+            
+            if education_ser.is_valid():
+                updated_education = education_ser.save()
+                return Response(EducationFullSerializer(updated_education).data)
+            else:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=education_ser.errors, extra={'data': request.data}
+                ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while updating education: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
             OpenApiParameter(name='id', description='Education ID of the education you want to delete', required=False,
                              location=OpenApiParameter.PATH, type=str)
         ],
@@ -349,6 +399,56 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             return ErrorResponse(
                 code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': experience_id}
             ).response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to update', required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=ExperienceUpsertSerializer,
+        responses={200: ExperienceFullSerializer, 500: ErrorSerializer},
+        summary="Update an experience"
+    )
+    def partial_update(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Updates an existing experience in the user's resume as specified in the resume id.
+        If a base is provided as the resume_id, the experience is updated in the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not self.authenticated_user.experience_set.filter(
+                id=pk, resume_section__resume=self.resume
+            ).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': pk}
+                ).response
+            
+            existing_experience: Experience = self.authenticated_user.experience_set.get(
+                id=pk, resume_section__resume=self.resume
+            )
+            payload = request.data.copy()
+            payload['user'] = self.authenticated_user.id
+            payload['resume_section'] = existing_experience.resume_section.id
+            
+            experience_ser = ExperienceUpsertSerializer(existing_experience, data=payload, partial=True)
+            
+            if experience_ser.is_valid():
+                updated_experience = experience_ser.save()
+                return Response(ExperienceFullSerializer(updated_experience).data)
+            else:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided!',
+                    details=experience_ser.errors, extra={'data': request.data}
+                ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while updating experience: {e}')
+            return error_response.response
 
     @extend_schema(
         parameters=[
