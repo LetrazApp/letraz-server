@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
 
 
 # Register your models here.
@@ -94,3 +94,9 @@ class ProjectAdmin(admin.ModelAdmin):
             'all': ('admin/css/widgets.css',)
         }
         js = ('admin/js/admin/RelatedObjectLookups.js',)
+
+
+
+@admin.register(Certification)
+class CertificationAdmin(admin.ModelAdmin):
+    list_display = ['id']

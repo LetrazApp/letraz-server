@@ -279,3 +279,19 @@ class Project(models.Model):
         self.save()
         self.resume_section.resume.add_skill(skill_name, skill_category)
         return skill
+
+class Certification(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
+                          help_text="Unique identifier for the certification")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             help_text="The user who owns this certification")
+    resume_section = models.OneToOneField(ResumeSection, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=False, null=False, help_text="Name of the certification.")
+    issuing_organization = models.CharField(max_length=255, blank=True, null=True)
+    issue_date = models.DateField(blank=True, null=True, help_text="Date when the certification was issued.")
+    credential_url = models.URLField(blank=True, null=True, help_text="Link to the certification credential.")
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when the certification was first created.")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when the certification was last updated.")
+
+    class Meta:
+        ordering = ['-created_at']
