@@ -1,9 +1,8 @@
 from rest_framework import serializers
-
 from CORE.serializers import CountrySerializer, SkillSerializer
 from JOB.serializers import JobShortSerializer, JobFullSerializer
 from PROFILE.serializers import UserSerializer
-from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency, Project
+from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency, Project, Certification
 
 
 class ResumeShortSerializer(serializers.ModelSerializer):
@@ -58,11 +57,35 @@ class ResumeSectionFullSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_data(resume_section: ResumeSection):
         if resume_section.type == ResumeSection.ResumeSectionType.Education:
-            return EducationFullSerializer(resume_section.education).data
+            try:
+                return EducationFullSerializer(resume_section.education).data
+            except Education.DoesNotExist:
+                resume_section.delete()
+                return None
         elif resume_section.type == ResumeSection.ResumeSectionType.Experience:
-            return ExperienceFullSerializer(resume_section.experience).data
+            try:
+                return ExperienceFullSerializer(resume_section.experience).data
+            except Experience.DoesNotExist:
+                resume_section.delete()
+                return None
         elif resume_section.type == ResumeSection.ResumeSectionType.Project:
-            return ProjectSerializer(resume_section.project).data
+            try:
+                return ProjectSerializer(resume_section.project).data
+            except Project.DoesNotExist:
+                resume_section.delete()
+                return None
+        elif resume_section.type == ResumeSection.ResumeSectionType.Certification:
+            try:
+                return CertificationSerializer(resume_section.certification).data
+            except Certification.DoesNotExist:
+                resume_section.delete()
+                return None
+        elif resume_section.type == ResumeSection.ResumeSectionType.Skill:
+            if resume_section.proficiency_set.count() == 0:
+                resume_section.delete()
+                return None
+            else:
+                return ProficiencySerializer(resume_section.proficiency_set.all(), many=True).data
         else:
             return None
 
@@ -170,4 +193,16 @@ class ProjectUpsertSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        exclude = ('user', 'resume_section')
+        fields = '__all__'
+
+
+class CertificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certification
+        fields = '__all__'
+
+
+class CertificationUpsertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certification
+        fields = '__all__'

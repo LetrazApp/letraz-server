@@ -8,10 +8,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
-from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project
+from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
-    ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer
+    ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
+    CertificationUpsertSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -862,6 +863,221 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             existing_project: Project = Project.objects.get(id=pk)
             parent_resume_section: ResumeSection = existing_project.resume_section
             existing_project.delete()
+            parent_resume_section.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
+
+# Certification CRUD ViewSets for a Resume
+@extend_schema(
+    tags=['Certification object'],
+    parameters=[
+        OpenApiParameter(
+            name="resume_id",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.PATH,
+            description="Resume ID of the resume the certification belongs to. If you want to interact with the base resume certification, just put `base` in here",
+            required=True,
+        ),
+    ]
+)
+class ResumeCertificationViewSets(viewsets.GenericViewSet):
+    """
+    API reference of all available endpoints for the Certifications object in an individual resume.
+    Contains endpoints for getting all Certifications for a resume, create, update and delete specific Certification by its ID as well.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.authenticated_user: User | None = None
+        self.resume: Resume | None = None
+        self.error: Response | None = None
+        super(ResumeCertificationViewSets, self).__init__(*args, **kwargs)
+
+    def __set_meta(self, request, resume_id: str):
+        """
+        Retrieve check and set authenticated user & resume
+        """
+        # Ownership Check for all types of API
+        self.authenticated_user: User = request.user
+        if resume_id == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            self.resume = base_resume
+        else:
+            if not self.authenticated_user.resume_set.filter(id=resume_id).exists():
+                self.error = ErrorResponse(code=ErrorCode.NOT_FOUND, message='Resume not found!',
+                                           status_code=404).response
+                return
+            self.resume = self.authenticated_user.resume_set.get(id=resume_id)
+
+    @extend_schema(
+        responses={200: CertificationSerializer(many=True), 500: ErrorSerializer},
+        summary="Get all certifications",
+    )
+    def list(self, request, resume_id: str) -> Response:
+        """
+        Gives all certifications for the Resume id or base if `base` is provided as resume id
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        return Response(CertificationSerializer(
+            Certification.objects.filter(resume_section__resume=self.resume), many=True).data,
+                        status=status.HTTP_200_OK)
+
+
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
+                             type=str)
+        ],
+        responses={200: CertificationSerializer, 500: ErrorSerializer},
+        summary="Get certification by id"
+    )
+    def retrieve(self, request, pk, resume_id: str) -> Response:
+        """
+        Gives the certification of the resume for the user by produced id or gives base resume certification of the user if id is provided as `base`.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        if Certification.objects.filter(resume_section__resume=self.resume, id=pk).exists():
+            return Response(CertificationSerializer(Certification.objects.get(resume_section__resume=self.resume, id=pk)).data)
+        else:
+            return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Certification not found!', status_code=404).response
+
+
+    @extend_schema(
+        request=CertificationUpsertSerializer,
+        responses={201: CertificationSerializer, 500: ErrorSerializer},
+        summary="Create a new certification",
+    )
+    def create(self, request, resume_id: str) -> Response:
+        """
+        Adds a new certification to the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the certification is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            payload: dict = request.data
+            new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
+            payload['resume_section'] = new_resume_section.id
+            print(payload)
+            payload['user'] = self.authenticated_user.id
+            certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(data=payload)
+            print(certification_ser)
+            if certification_ser.is_valid():
+                new_certification: Certification = certification_ser.save()
+                return Response(CertificationSerializer(new_certification).data)
+            else:
+                if new_resume_section:
+                    new_resume_section.delete()
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=certification_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding certification: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the certification that you want to update',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=CertificationUpsertSerializer,
+        responses={200: CertificationSerializer, 500: ErrorSerializer},
+        summary="Update a certification",
+    )
+    def partial_update(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Updates an existing certification of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the certification is added to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Certification.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                ).response
+            existing_certification: Certification = Certification.objects.get(id=pk)
+            payload: dict = request.data.copy()
+            payload['user'] = self.authenticated_user.id
+            certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(existing_certification, data=payload, partial=True)
+            if certification_ser.is_valid():
+                updated_certification: Certification = certification_ser.save()
+                return Response(CertificationSerializer(updated_certification).data)
+            else:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                    details=certification_ser.errors, extra={'data': request.data}
+                ).response
+        except ValueError as ve:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
+                extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
+            ).response
+        except Exception as e:
+            error_response: ErrorResponse = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
+                details=e.__str__(), extra={'data': request.data},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='ID of the certification that you want to delete',
+                             required=True,
+                             type=str, location=OpenApiParameter.PATH)
+        ],
+        request=CertificationUpsertSerializer,
+        responses={200: None, 500: ErrorSerializer},
+        summary="Delete a certification",
+    )
+    def destroy(self, request, resume_id: str, pk: str) -> Response:
+        """
+        Delete an existing certification of the user's resume as specified in the resume id.
+        If a `base` is provided as resume id, the certification will be  deleted from to the base resume.
+        """
+        self.__set_meta(request, resume_id)
+        if self.error:
+            return self.error
+        try:
+            if not Certification.objects.filter(id=pk).exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Certification not found!', details={'certification': pk}
+                ).response
+            existing_certification: Certification = Certification.objects.get(id=pk)
+            parent_resume_section: ResumeSection = existing_certification.resume_section
+            existing_certification.delete()
             parent_resume_section.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ValueError as ve:
