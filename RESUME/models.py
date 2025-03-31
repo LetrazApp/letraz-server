@@ -1,4 +1,3 @@
-import logging
 import uuid
 from django.db import models
 from django.db.models import Q
@@ -7,9 +6,7 @@ from CORE.models import Country, Skill
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
-
 from letraz_server import settings
-from letraz_server.contrib.error_framework import ErrorResponse
 
 
 # Create your models here.
