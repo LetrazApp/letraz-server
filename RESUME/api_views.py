@@ -1,5 +1,7 @@
 import json
 import logging
+from http import HTTPStatus
+
 from django.db.models import QuerySet
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -754,7 +756,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                     for skill_dict in skill_used:
                         new_project.add_skill(skill_name=skill_dict.get('name'),
                                               skill_category=skill_dict.get('category'))
-                return Response(ProjectSerializer(new_project).data)
+                return Response(ProjectSerializer(new_project).data, status=HTTPStatus.CREATED)
             else:
                 if new_resume_section:
                     new_resume_section.delete()
@@ -975,13 +977,11 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             payload: dict = request.data
             new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
             payload['resume_section'] = new_resume_section.id
-            print(payload)
             payload['user'] = self.authenticated_user.id
             certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(data=payload)
-            print(certification_ser)
             if certification_ser.is_valid():
                 new_certification: Certification = certification_ser.save()
-                return Response(CertificationSerializer(new_certification).data)
+                return Response(CertificationSerializer(new_certification).data, status=HTTPStatus.CREATED)
             else:
                 if new_resume_section:
                     new_resume_section.delete()
