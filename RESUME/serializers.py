@@ -189,12 +189,10 @@ class SkillUpsertSerializer(serializers.Serializer):
 
 
 class ProjectUpsertSerializer(serializers.ModelSerializer):
-    skills_used = SkillUpsertSerializer(many=True)
 
     class Meta:
         model = Project
         fields = '__all__'
-
 
 class CertificationSerializer(serializers.ModelSerializer):
     class Meta:
