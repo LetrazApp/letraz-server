@@ -1,0 +1,87 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@2.1.1
+  docker: circleci/docker@2.2.0
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          packages:
+            - uv
+      - run:
+          name: Install dependencies
+          command: |
+            python -m uv sync
+      - run:
+          name: Run tests
+          command: |
+            python manage.py test
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  build-and-push-image:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - setup_remote_docker:
+          version: 20.10.14
+      - attach_workspace:
+          at: .
+      - docker/check
+      - run:
+          name: Login to Docker Hub
+          command: |
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - docker/build:
+          image: ${DOCKER_USERNAME}/letraz-server
+          tag: ${CIRCLE_SHA1}
+      - docker/push:
+          image: ${DOCKER_USERNAME}/letraz-server
+          tag: ${CIRCLE_SHA1}
+
+  deploy:
+    docker:
+      - image: cimg/base:2023.03
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "${SSH_KEY_FINGERPRINT}"
+      - run:
+          name: Make deployment script executable
+          command: chmod +x scripts/deploy.sh
+      - run:
+          name: Deploy to DigitalOcean droplet
+          command: |
+            scp -o StrictHostKeyChecking=no scripts/deploy.sh ${SSH_USER}@${SSH_HOST}:/tmp/deploy.sh
+            ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} << EOF
+              export DOCKER_USERNAME=${DOCKER_USERNAME}
+              export IMAGE_TAG=${CIRCLE_SHA1}
+              chmod +x /tmp/deploy.sh
+              /tmp/deploy.sh
+            EOF
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
+      - build-and-push-image:
+          requires:
+            - build-and-test
+          filters:
+            branches:
+              only: main
+      - deploy:
+          requires:
+            - build-and-push-image
+          filters:
+            branches:
+              only: main 
