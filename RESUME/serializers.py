@@ -204,3 +204,23 @@ class CertificationUpsertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certification
         fields = '__all__'
+
+
+class SectionRearrangeSerializer(serializers.Serializer):
+    """
+    Serializer for rearranging resume sections.
+    Accepts an array of section IDs representing the desired order.
+    """
+    section_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        min_length=1,
+        help_text="Array of section IDs in the desired order"
+    )
+
+    def validate_section_ids(self, value):
+        """
+        Validate that there are no duplicate section IDs.
+        """
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError("Duplicate section IDs are not allowed.")
+        return value

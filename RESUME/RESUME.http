@@ -176,3 +176,28 @@ Content-Type: application/json
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/project/
 Cookie: __session={{token}}
 Content-Type: application/json
+
+### Rearrange Resume Sections
+PUT {{BASE_URL}}/resume/{{resume_id}}/sections/rearrange/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "section_ids": [
+    "550e8400-e29b-41d4-a716-446655440001",
+    "550e8400-e29b-41d4-a716-446655440002", 
+    "550e8400-e29b-41d4-a716-446655440003"
+  ]
+}
+
+### Rearrange Base Resume Sections
+PUT {{BASE_URL}}/resume/base/sections/rearrange/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "section_ids": [
+    "550e8400-e29b-41d4-a716-446655440001",
+    "550e8400-e29b-41d4-a716-446655440002"
+  ]
+}
