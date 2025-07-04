@@ -7,4 +7,5 @@ urlpatterns = [
     path('error-list-example/', api_views.error_list_example),
     path('waitlist/', api_views.waitlist_crud),
     path('skill/', api_views.get_all_skill),
+    path('skill/categories/', api_views.get_all_skill_categories),
 ]

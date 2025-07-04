@@ -1,6 +1,7 @@
 import logging
+from rest_framework import serializers
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -147,6 +148,33 @@ def get_all_skill(request):
     """
     try:
         return Response(SkillSerializer(Skill.objects.all(), many=True).data)
+    except Exception as e:
+        error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(),
+                                       extra={'data': request.data})
+        logger.exception(f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
+        return error_response.response
+
+@extend_schema(
+    methods=['GET'],
+    tags=['Skill object'],
+    auth=[],
+    summary="Get all global skill categories",
+    responses={
+        200: {
+            'type': 'array',
+            'items': {'type': 'string'}
+        },
+        400: ErrorSerializer
+    }
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_all_skill_categories(request):
+    """
+    Get all skills available in the database across users and resumes
+    """
+    try:
+        return Response(list({skill.category for skill in Skill.objects.all()}))
     except Exception as e:
         error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(),
                                        extra={'data': request.data})

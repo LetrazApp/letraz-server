@@ -85,7 +85,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
             description='Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here',
             required=True,
             location=OpenApiParameter.PATH,
-            type=OpenApiTypes.STR
+            type=str
         )
     ]
 )
@@ -285,7 +285,7 @@ class EducationViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=OpenApiTypes.STR,
+            type=str,
             location=OpenApiParameter.PATH,
             description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
             required=True,
@@ -488,7 +488,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=OpenApiTypes.STR,
+            type=str,
             location=OpenApiParameter.PATH,
             description="Resume ID of the resume the education belongs to. If you want to interact with the base Skill, just put `base` in here",
             required=True,
@@ -496,6 +496,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     ]
 )
 class ResumeSkillViewSets(viewsets.GenericViewSet):
+    serializer_class = ProficiencySerializer
     """
     API reference of all available endpoints for the Skill object in an individual resume.
     Contains endpoints for getting all skills for a resume, create, update and delete specific skill by its ID as well.
@@ -678,7 +679,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=OpenApiTypes.STR,
+            type=str,
             location=OpenApiParameter.PATH,
             description="Resume ID of the resume the education belongs to. If you want to interact with the base project, just put `base` in here",
             required=True,
@@ -887,7 +888,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=OpenApiTypes.STR,
+            type=str,
             location=OpenApiParameter.PATH,
             description="Resume ID of the resume the certification belongs to. If you want to interact with the base resume certification, just put `base` in here",
             required=True,
