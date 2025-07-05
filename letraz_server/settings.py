@@ -173,7 +173,7 @@ WSGI_APPLICATION = 'letraz_server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 DB_STATUS = 'UNINITIALIZED'
-if os.environ.get('ENGINE'):
+if os.environ.get('DB_ENGINE'):
     dbEnvironmentValidator = DBEnvironmentValidator()
     if dbEnvironmentValidator.validate():
         try:
@@ -182,7 +182,7 @@ if os.environ.get('ENGINE'):
             }
             DB_STATUS = 'OPERATIONAL'
         except Exception as e:
-            logger.exception(f'Exception occurred while connecting to db! \n{e}')
+            logger.exception('Exception occurred while connecting to db!')
             DB_STATUS = 'FATAL'
     else:
         logger.error(f'Database environment validation failed! \n{dbEnvironmentValidator.errors.__str__()}')

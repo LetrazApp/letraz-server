@@ -3,6 +3,7 @@ import logging
 from http import HTTPStatus
 
 from django.db.models import QuerySet
+from django.db import transaction
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets, serializers
@@ -14,7 +15,7 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
-    CertificationUpsertSerializer
+    CertificationUpsertSerializer, SectionRearrangeSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
@@ -74,6 +75,95 @@ class ResumeViewSets(viewsets.GenericViewSet):
             return ErrorResponse(
                 code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
             ).response
+
+    @extend_schema(
+        request=SectionRearrangeSerializer,
+        responses={200: ResumeFullSerializer, 400: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
+        summary="Rearrange resume sections",
+        description="Rearrange the order of sections in a resume by providing an array of section IDs in the desired order."
+    )
+    @action(detail=True, methods=['put'], url_path='sections/rearrange')
+    def rearrange_sections(self, request, pk=None):
+        """
+        Rearrange the order of sections in a resume.
+        Accepts an array of section IDs and updates the order of sections in the resume.
+        """
+        self.__set_meta(request)
+        
+        # Get the resume
+        if pk == 'base':
+            resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+        else:
+            resume_qs = self.authenticated_user.resume_set.filter(id=pk)
+            if not resume_qs.exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': pk}
+                ).response
+            resume = resume_qs.first()
+        
+        # Validate request data
+        serializer = SectionRearrangeSerializer(data=request.data)
+        if not serializer.is_valid():
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message='Invalid request data.',
+                details=serializer.errors, extra={'data': request.data}
+            ).response
+        
+        section_ids = serializer.validated_data['section_ids']
+        
+        try:
+            # Get all existing sections for the resume
+            existing_sections = resume.resumesection_set.all()
+            existing_section_ids = set(str(section.id) for section in existing_sections)
+            provided_section_ids = set(str(section_id) for section_id in section_ids)
+            
+            # Validate that all provided section IDs belong to the resume
+            invalid_section_ids = provided_section_ids - existing_section_ids
+            if invalid_section_ids:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST, 
+                    message='Some section IDs do not belong to this resume.',
+                    details={'invalid_section_ids': list(invalid_section_ids)}
+                ).response
+            
+            # Check if all existing sections are included in the request
+            missing_section_ids = existing_section_ids - provided_section_ids
+            if missing_section_ids:
+                return ErrorResponse(
+                    code=ErrorCode.INVALID_REQUEST,
+                    message='Some existing sections are missing from the request.',
+                    details={'missing_section_ids': list(missing_section_ids)}
+                ).response
+            
+            # Update the section order
+            with transaction.atomic():
+                # Create a mapping of section ID to section object
+                section_map = {str(section.id): section for section in existing_sections}
+                
+                # Two-step process to avoid unique constraint violation:
+                # Step 1: Set all sections to temporary negative indices to avoid conflicts
+                for temp_index, section_id in enumerate(section_ids):
+                    section = section_map[str(section_id)]
+                    section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
+                    section.save()
+                
+                # Step 2: Set all sections to their final indices
+                for new_index, section_id in enumerate(section_ids):
+                    section = section_map[str(section_id)]
+                    section.index = new_index
+                    section.save()
+            
+            # Return the updated resume
+            return Response(ResumeFullSerializer(resume).data)
+            
+        except Exception as e:
+            error_response = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR,
+                message='Unexpected error occurred while rearranging sections.',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while rearranging sections: {e}')
+            return error_response.response
 
 
 # Education CRUD operations
