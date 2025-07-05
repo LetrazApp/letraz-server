@@ -140,7 +140,14 @@ class ResumeViewSets(viewsets.GenericViewSet):
                 # Create a mapping of section ID to section object
                 section_map = {str(section.id): section for section in existing_sections}
                 
-                # Update the index of each section based on the provided order
+                # Two-step process to avoid unique constraint violation:
+                # Step 1: Set all sections to temporary negative indices to avoid conflicts
+                for temp_index, section_id in enumerate(section_ids):
+                    section = section_map[str(section_id)]
+                    section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
+                    section.save()
+                
+                # Step 2: Set all sections to their final indices
                 for new_index, section_id in enumerate(section_ids):
                     section = section_map[str(section_id)]
                     section.index = new_index
