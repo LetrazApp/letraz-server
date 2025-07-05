@@ -20,4 +20,7 @@ Content-Type: application/json
 }
 
 ### Get all global skills API
-GET https://{{url}}/api/v1/skills/
+GET https://{{url}}/api/v1/skill/
+
+### Get all global skill categories API
+GET https://{{url}}/api/v1/skill/categories

@@ -21,8 +21,8 @@ class DBEnvironmentValidator:
         self.PASSWORD: str = os.environ.get('DB_PASSWORD')
         self.HOST: str = os.environ.get('DB_HOST')
         self.PORT: str = os.environ.get('DB_PORT')
-        self.SSL_MODE_REQUIRED: str = os.environ.get('SSL_MODE_REQUIRED')
-        self.DISABLE_SERVER_SIDE_CURSORS: str = os.environ.get('DISABLE_SERVER_SIDE_CURSORS')
+        self.SSL_MODE_REQUIRED: str = os.environ.get('DB_SSL_MODE_REQUIRED')
+        self.DISABLE_SERVER_SIDE_CURSORS: str = os.environ.get('DB_DISABLE_SERVER_SIDE_CURSORS')
         self.status = False
         self.errors = []
         self.config = {}
