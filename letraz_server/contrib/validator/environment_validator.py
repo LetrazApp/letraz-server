@@ -15,12 +15,12 @@ class DBEnvironmentValidator:
             'SQLITE': {'tags': ['sqlite', 'django.db.backends.sqlite3'], 'engine_name': 'django.db.backends.sqlite3'},
         }
 
-        self.ENGINE: str = os.environ.get('ENGINE')
-        self.NAME: str = os.environ.get('NAME')
-        self.USER: str = os.environ.get('USER')
-        self.PASSWORD: str = os.environ.get('PASSWORD')
-        self.HOST: str = os.environ.get('HOST')
-        self.PORT: str = os.environ.get('PORT')
+        self.ENGINE: str = os.environ.get('DB_ENGINE')
+        self.NAME: str = os.environ.get('DB_NAME')
+        self.USER: str = os.environ.get('DB_USER')
+        self.PASSWORD: str = os.environ.get('DB_PASSWORD')
+        self.HOST: str = os.environ.get('DB_HOST')
+        self.PORT: str = os.environ.get('DB_PORT')
         self.SSL_MODE_REQUIRED: str = os.environ.get('SSL_MODE_REQUIRED')
         self.DISABLE_SERVER_SIDE_CURSORS: str = os.environ.get('DISABLE_SERVER_SIDE_CURSORS')
         self.status = False
