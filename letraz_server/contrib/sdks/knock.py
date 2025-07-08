@@ -54,61 +54,99 @@ class KnockSDK:
             logger.error(f"Failed to identify user {user_id} in Knock: {str(e)}")
             return False
     
-    def _transform_user_properties(self, properties: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_user_properties(self, user_info: dict) -> dict:
         """
-        Transform user properties to match Knock's expected format.
+        Transform user properties from our format to Knock's expected format.
         
         Args:
-            properties: Dictionary of user properties
+            user_info: Dict containing user information
             
         Returns:
-            Dict[str, Any]: Transformed properties for Knock
+            Dict with properties formatted for Knock API
         """
-        transformed = {}
+        properties = {}
         
-        # Handle email
-        if 'email' in properties:
-            transformed['email'] = properties['email']
-            
-        # Handle name - combine first_name and last_name into name
-        first_name = properties.get('first_name', '').strip()
-        last_name = properties.get('last_name', '').strip()
+        # Combine first_name and last_name into 'name' for Knock
+        first_name = user_info.get('first_name', '').strip()
+        last_name = user_info.get('last_name', '').strip()
+        
         if first_name or last_name:
-            transformed['name'] = f"{first_name} {last_name}".strip()
+            properties['name'] = f"{first_name} {last_name}".strip()
+        
+        # Add email if available
+        if user_info.get('email_address'):
+            properties['email'] = user_info['email_address']
+        
+        # Add avatar URL if available
+        if user_info.get('avatar_url'):
+            properties['avatar'] = user_info['avatar_url']
+        
+        # Add any other properties that Knock accepts
+        # Note: We filter out properties that Knock doesn't accept
+        
+        return properties
+        
+    def create_customer_from_user_info(self, user_id: str, user_info: dict) -> bool:
+        """
+        Create a customer in Knock from user info dict.
+        
+        Args:
+            user_id: User ID
+            user_info: Dict containing user information including avatar_url
             
-        # Handle phone_number
-        if 'phone_number' in properties:
-            transformed['phone_number'] = properties['phone_number']
-            
-        # Handle avatar
-        if 'avatar' in properties:
-            transformed['avatar'] = properties['avatar']
-            
-        # Handle timezone
-        if 'timezone' in properties:
-            transformed['timezone'] = properties['timezone']
-            
-        # Handle locale
-        if 'locale' in properties:
-            transformed['locale'] = properties['locale']
-            
-        # Handle created_at
-        if 'created_at' in properties:
-            transformed['created_at'] = properties['created_at']
-        elif 'last_login' in properties:
-            # Use last_login as created_at if available
-            transformed['created_at'] = properties['last_login']
-            
-        # Add any other custom properties that don't conflict with reserved names
-        # Note: Only add properties that Knock accepts as custom properties
-        reserved_names = {'email', 'name', 'first_name', 'last_name', 'phone_number', 
-                         'avatar', 'timezone', 'locale', 'created_at', 'last_login', 'source'}
-        for key, value in properties.items():
-            if key not in reserved_names:
-                # Store additional properties as custom properties
-                transformed[key] = value
+        Returns:
+            bool: True if customer was created successfully, False otherwise
+        """
+        try:
+            if not self.client:
+                logger.debug("Knock client not initialized, skipping customer creation")
+                return False
                 
-        return transformed
+            properties = self._transform_user_properties(user_info)
+            
+            logger.debug(f"Creating Knock customer for user {user_id} with properties: {properties}")
+            
+            # Pass properties as individual keyword arguments
+            response = self.client.users.update(
+                user_id=user_id,
+                **properties
+            )
+            
+            logger.debug(f"Knock customer creation response: {response}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to create Knock customer for user {user_id}: {e}")
+            return False
+
+    def ensure_customer_exists_with_info(self, user_id: str, user_info: dict) -> bool:
+        """
+        Ensure a customer exists in Knock with user info.
+        
+        Args:
+            user_id: User ID
+            user_info: Dict containing user information including avatar_url
+            
+        Returns:
+            bool: True if customer exists or was created, False otherwise
+        """
+        try:
+            if not self.client: # Changed from self.enabled to self.client
+                logger.debug("Knock client not initialized, skipping customer check")
+                return False
+                
+            # Check if user already exists in Knock
+            try:
+                response = self.client.users.get(user_id=user_id)
+                logger.debug(f"User {user_id} already exists in Knock: {response}")
+                return True
+            except Exception as e:
+                logger.debug(f"User {user_id} not found in Knock, creating: {e}")
+                return self.create_customer_from_user_info(user_id, user_info)
+                
+        except Exception as e:
+            logger.error(f"Failed to check/create Knock customer for user {user_id}: {e}")
+            return False
         
     def create_customer_from_user(self, user) -> bool:
         """
@@ -122,45 +160,30 @@ class KnockSDK:
         """
         try:
             # Check if Knock is available
-            if not self.is_available():
+            if not self.client: # Changed from self.is_available to self.client
                 logger.warning("Knock SDK is not available - skipping customer creation")
                 return False
                 
-            # Prepare user properties for Knock
-            user_properties = {
+            # Create properties dict for Knock
+            properties = {
                 'email': user.email,
-                'name': user.get_full_name() if user.get_full_name() else user.email,
             }
             
-            # Add individual name fields if available
-            if user.first_name:
-                user_properties['first_name'] = user.first_name
-            if user.last_name:
-                user_properties['last_name'] = user.last_name
+            # Add name if available
+            if user.first_name or user.last_name:
+                properties['name'] = f"{user.first_name or ''} {user.last_name or ''}".strip()
                 
-            # Add additional properties that might be useful for notifications
-            user_properties.update({
-                'created_at': user.date_joined.isoformat() if hasattr(user, 'date_joined') else None,
-                'last_login': user.last_login.isoformat() if user.last_login else None,
-                'source': 'clerk_signup'
-            })
+            logger.debug(f"Creating Knock customer for user {user.id} with properties: {properties}")
             
-            # Remove None values
-            user_properties = {k: v for k, v in user_properties.items() if v is not None}
-            
-            # Identify user in Knock
-            success = self.identify_user(
-                user_id=str(user.id),
-                properties=user_properties
+            # Pass properties as individual keyword arguments
+            response = self.client.users.update(
+                user_id=user.id,
+                **properties
             )
             
-            if success:
-                logger.info(f"Successfully created/updated Knock customer for user {user.id}")
-                return True
-            else:
-                logger.error(f"Failed to create/update Knock customer for user {user.id}")
-                return False
-                
+            logger.debug(f"Knock customer creation response: {response}")
+            return True
+            
         except Exception as e:
             # Log the error but don't break the user creation flow
             logger.error(f"Unexpected error creating Knock customer for user {user.id}: {str(e)}")
@@ -211,6 +234,39 @@ class KnockSDK:
                 
         except Exception as e:
             logger.error(f"Unexpected error re-identifying user {user.id} in Knock: {str(e)}")
+            return False
+    
+    def ensure_customer_exists(self, user) -> bool:
+        """
+        Ensure a user exists as a customer in Knock.
+        This method is idempotent and safe to call multiple times.
+        
+        Args:
+            user: The Django User instance
+            
+        Returns:
+            bool: True if user exists or was created successfully, False otherwise
+        """
+        try:
+            if not self.client: # Changed from self.is_available to self.client
+                logger.warning("Knock SDK is not available - skipping customer check")
+                return False
+            
+            # Check if user exists in Knock first
+            try:
+                existing_user = self.client.users.get(user_id=str(user.id))
+                if existing_user:
+                    logger.debug(f"User {user.id} already exists in Knock")
+                    return True
+            except Exception as e:
+                # User doesn't exist or other error, proceed to create
+                logger.debug(f"User {user.id} not found in Knock, will create: {str(e)}")
+            
+            # Create the user in Knock
+            return self.create_customer_from_user(user)
+            
+        except Exception as e:
+            logger.error(f"Error ensuring Knock customer exists for user {user.id}: {str(e)}")
             return False
             
     def is_available(self) -> bool:

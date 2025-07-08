@@ -36,6 +36,7 @@ class ClerkSDK:
                 "email_address": data["email_addresses"][0]["email_address"],
                 "first_name": data["first_name"],
                 "last_name": data["last_name"],
+                "avatar_url": data.get("image_url", ""),
                 "last_login": datetime.datetime.fromtimestamp(
                     data["last_sign_in_at"] / 1000, tz=pytz.timezone(settings.TIME_ZONE)
                 ),
@@ -45,6 +46,7 @@ class ClerkSDK:
                 "email_address": "",
                 "first_name": "",
                 "last_name": "",
+                "avatar_url": "",
                 "last_login": None
             }
 
