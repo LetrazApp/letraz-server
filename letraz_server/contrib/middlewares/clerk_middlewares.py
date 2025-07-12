@@ -95,21 +95,13 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                             user.last_name = info["last_name"]
                             user.last_login = info["last_login"]
                         user.save()
-                        
+
                         # Create customer in Knock after successful user creation
                         if found:
                             self.knock.create_customer_from_user_info(user.id, info)
                         else:
                             self.knock.create_customer_from_user(user)
-                else:
-                    # For existing users, ensure they have a Knock customer
-                    # This handles users created before Knock integration
-                    found, info = self.clerk.fetch_user_info(user.id)
-                    if found:
-                        self.knock.ensure_customer_exists_with_info(user.id, info)
-                    else:
-                        self.knock.ensure_customer_exists(user)
-                        
+
                 return user
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed("Token has expired!")
