@@ -12,6 +12,7 @@ import logging
 from PROFILE.models import User
 from letraz_server import settings
 from letraz_server.contrib.sdks.clerk import ClerkSDK
+from letraz_server.contrib.sdks.knock import KnockSDK
 from letraz_server.settings import PROJECT_NAME
 
 __module_name = f'{PROJECT_NAME}.{__name__}'
@@ -24,6 +25,7 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
             frontend_api_url=settings.CLERK_FRONTEND_API_URL,
             secret_key=settings.CLERK_SECRET_KEY
         )
+        self.knock = KnockSDK(api_key=settings.KNOCK_API_KEY)
 
     def authenticate(self, request):
         authentication_cookies = request.COOKIES
@@ -93,6 +95,13 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                             user.last_name = info["last_name"]
                             user.last_login = info["last_login"]
                         user.save()
+
+                        # Create customer in Knock after successful user creation
+                        if found:
+                            self.knock.create_customer_from_user_info(user.id, info)
+                        else:
+                            self.knock.create_customer_from_user(user)
+
                 return user
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed("Token has expired!")

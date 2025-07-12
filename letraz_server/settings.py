@@ -76,6 +76,13 @@ if not CLERK_SECRET_KEY or not CLERK_FRONTEND_API_URL:
     CLERK_STATUS = 'DOWN'
     logger.error('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
 
+# Knock Configuration
+KNOCK_STATUS = 'OPERATIONAL'
+KNOCK_API_KEY = os.environ.get('KNOCK_API_KEY', '')
+if not KNOCK_API_KEY:
+    KNOCK_STATUS = 'DOWN'
+    logger.error('Knock API_KEY is not provided!')
+
 # Django Rest Framework Settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
