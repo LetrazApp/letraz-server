@@ -120,25 +120,7 @@ cleanup_old_images() {
         xargs -r docker rmi || true
 }
 
-# Function to run Django migrations
-run_migrations() {
-    log "Running Django migrations..."
-    
-    # Create a temporary container to run migrations
-    docker run --rm \
-        --env-file .env \
-        -v $(pwd)/data:/letraz/data \
-        --entrypoint="" \
-        "$FULL_IMAGE_NAME" \
-        python manage.py migrate --noinput
-    
-    if [ $? -eq 0 ]; then
-        log "Django migrations completed successfully"
-    else
-        error "Django migrations failed"
-        return 1
-    fi
-}
+
 
 # Function to collect static files (handled in Dockerfile, but keeping for completeness)
 collect_static() {
@@ -163,9 +145,6 @@ deploy() {
         error "Failed to pull Docker image"
         return 1
     fi
-    
-    # Run Django migrations
-    run_migrations
     
     # Collect static files
     collect_static
@@ -193,7 +172,7 @@ deploy() {
     log "Starting new container with image: ${FULL_IMAGE_NAME}..."
     docker run -d \
         --name "$CONTAINER_NAME" \
-        --env-file .env \
+        --env-file .env.docker \
         -p 8000:8000 \
         --restart unless-stopped \
         --memory=2g \
@@ -224,10 +203,22 @@ deploy() {
         cleanup_old_images
         
         log "Deployment completed successfully!"
+        
+        # Cleanup temporary files
+        if [ -f ".env.docker" ]; then
+            rm .env.docker
+        fi
+        
         return 0
     else
         error "New container failed health check"
         rollback
+        
+        # Cleanup temporary files
+        if [ -f ".env.docker" ]; then
+            rm .env.docker
+        fi
+        
         return 1
     fi
 }
@@ -297,12 +288,57 @@ main() {
         exit 1
     fi
     
-    # Load environment variables from .env file
+    # Load environment variables from .env file and create Docker-compatible version
     if [ -f ".env" ]; then
         log "Loading environment variables from .env file..."
-        set -a  # automatically export all variables
-        source .env
-        set +a  # stop automatically exporting
+        
+        # Create a temporary Docker-compatible .env file
+        > .env.docker
+        
+        # Read .env file line by line and export variables properly
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                echo "$line" >> .env.docker
+                continue
+            fi
+            # Parse key=value format
+            if [[ "$line" =~ ^[^=]+= ]]; then
+                key="${line%%=*}"
+                value="${line#*=}"
+                # Remove surrounding quotes if they exist
+                value="${value%\"}"
+                value="${value#\"}"
+                value="${value%\'}"
+                value="${value#\'}"
+                
+                # Convert semicolons to commas for Django CORS settings
+                if [[ "$key" == "CORS_ALLOWED_ORIGINS" ]] || [[ "$key" == "CSRF_TRUSTED_ORIGINS" ]]; then
+                    value="${value//;/,}"
+                    log "Converted $key to comma-separated format for Docker"
+                fi
+                
+                # Debug Sentry DSN
+                if [[ "$key" == "SENTRY_DSN" ]]; then
+                    if [[ -n "$value" ]]; then
+                        log "Sentry DSN loaded successfully (${#value} characters)"
+                    else
+                        warn "Sentry DSN is empty"
+                    fi
+                fi
+                
+                # Export the variable for shell usage
+                export "$key=$value"
+                
+                # Write to Docker-compatible .env file
+                echo "$key=$value" >> .env.docker
+            fi
+        done < .env
+        
+        # Verify key variables are set
+        if [ -n "$GITHUB_USERNAME" ] && [ -n "$GITHUB_TOKEN" ]; then
+            log "GitHub credentials loaded successfully"
+        fi
     fi
     
     # Login to GitHub Container Registry
