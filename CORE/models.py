@@ -26,6 +26,8 @@ class Waitlist(models.Model):
                                 help_text='The referrer of the user who joined the waitlist. Usually the source they have come from.')
     waiting_number = AutoIncrementWaitingNumberField(editable=False,
                                                      help_text='The waiting number of the user who joined the waitlist.')
+    has_access = models.BooleanField(default=False,
+                                     help_text='Whether the user has been granted access to the platform.')
     created_at = models.DateTimeField(auto_now_add=True,
                                       help_text='The timestamp at which the user joined the waitlist.')
 

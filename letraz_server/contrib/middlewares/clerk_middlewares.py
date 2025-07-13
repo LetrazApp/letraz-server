@@ -10,6 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed
 import logging
 
 from PROFILE.models import User
+from CORE.models import Waitlist
 from letraz_server import settings
 from letraz_server.contrib.sdks.clerk import ClerkSDK
 from letraz_server.contrib.sdks.knock import KnockSDK
@@ -96,6 +97,10 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                             user.last_login = info["last_login"]
                         user.save()
 
+                        # Remove waitlist entry if user email matches
+                        if found and info.get("email_address"):
+                            self._remove_waitlist_entry(info["email_address"])
+
                         # Create customer in Knock with email conflict handling
                         if found:
                             self._create_knock_customer_for_new_user(user, info)
@@ -138,4 +143,27 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
             return self.knock.create_customer_with_email_conflict_handling(user.id, user_info)
         except Exception as e:
             logger.error(f"Failed to create Knock customer for user {user.id}: {str(e)}")
+            return False
+
+    def _remove_waitlist_entry(self, email: str) -> bool:
+        """
+        Remove waitlist entry for a user when they create an account.
+        
+        Args:
+            email: The email address to remove from waitlist
+            
+        Returns:
+            bool: True if successfully removed or not found, False if error occurred
+        """
+        try:
+            waitlist_entry = Waitlist.objects.filter(email=email).first()
+            if waitlist_entry:
+                waitlist_entry.delete()
+                logger.info(f"Removed waitlist entry for email: {email}")
+                return True
+            else:
+                logger.debug(f"No waitlist entry found for email: {email}")
+                return True  # Not an error if the entry doesn't exist
+        except Exception as e:
+            logger.error(f"Failed to remove waitlist entry for email {email}: {str(e)}")
             return False

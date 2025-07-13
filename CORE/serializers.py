@@ -80,7 +80,24 @@ class WaitlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Waitlist
         fields = '__all__'
-        read_only_fields = ['id', 'waiting_number', 'created_at']
+        read_only_fields = ['id', 'waiting_number', 'created_at', 'has_access']
+
+
+class WaitlistUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Waitlist
+        fields = ['has_access']
+
+
+class WaitlistBulkUpdateSerializer(serializers.Serializer):
+    waitlist_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        help_text='List of waitlist entry IDs to update',
+        allow_empty=False
+    )
+    has_access = serializers.BooleanField(
+        help_text='Whether to grant or revoke access for the selected users'
+    )
 
 
 class AliasSkillSerializer(serializers.ModelSerializer):
