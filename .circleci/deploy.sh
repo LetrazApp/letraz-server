@@ -304,12 +304,20 @@ main() {
         exit 1
     fi
     
+    # Load environment variables from .env file
+    if [ -f ".env" ]; then
+        log "Loading environment variables from .env file..."
+        set -a  # automatically export all variables
+        source .env
+        set +a  # stop automatically exporting
+    fi
+    
     # Login to GitHub Container Registry
     if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_USERNAME" ]; then
         log "Logging in to GitHub Container Registry..."
         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
     else
-        warn "GitHub credentials not found. Make sure GITHUB_TOKEN and GITHUB_USERNAME are set."
+        warn "GitHub credentials not found. Make sure GITHUB_TOKEN and GITHUB_USERNAME are set in .env file."
     fi
     
     # Run deployment
