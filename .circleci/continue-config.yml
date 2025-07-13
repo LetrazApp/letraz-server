@@ -260,7 +260,7 @@ jobs:
             sleep 30
             
             # Check health endpoint and deployment status
-            ssh $SSH_USER@$SSH_HOST "cd ~/app && curl -f http://localhost:8000/health || echo 'Health endpoint not available' && ./deploy.sh --status"
+            ssh $SSH_USER@$SSH_HOST "cd ~/app && curl -f http://localhost:8000/api/v1/health || echo 'Health endpoint not available' && ./deploy.sh --status"
             
             echo "Deployment verification completed"
       - run:

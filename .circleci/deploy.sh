@@ -12,7 +12,7 @@ BACKUP_CONTAINER_NAME="letraz-server-backup"
 REGISTRY="ghcr.io/letrazapp"
 IMAGE_NAME="letraz-server"
 FULL_IMAGE_NAME="${REGISTRY}/${IMAGE_NAME}:${DOCKER_TAG}"
-HEALTH_CHECK_URL="http://localhost:8000/health"
+HEALTH_CHECK_URL="http://localhost:8000/api/v1/health"
 HEALTH_CHECK_TIMEOUT=60
 HEALTH_CHECK_INTERVAL=5
 WORKERS=3
@@ -127,7 +127,8 @@ run_migrations() {
     # Create a temporary container to run migrations
     docker run --rm \
         --env-file .env \
-        -v $(pwd)/data:/app/data \
+        -v $(pwd)/data:/letraz/data \
+        --entrypoint="" \
         "$FULL_IMAGE_NAME" \
         python manage.py migrate --noinput
     
@@ -139,22 +140,11 @@ run_migrations() {
     fi
 }
 
-# Function to collect static files
+# Function to collect static files (handled in Dockerfile, but keeping for completeness)
 collect_static() {
-    log "Collecting static files..."
-    
-    # Create a temporary container to collect static files
-    docker run --rm \
-        --env-file .env \
-        -v $(pwd)/static:/app/static \
-        "$FULL_IMAGE_NAME" \
-        python manage.py collectstatic --noinput
-    
-    if [ $? -eq 0 ]; then
-        log "Static files collected successfully"
-    else
-        warn "Static files collection failed (this might be expected)"
-    fi
+    log "Static files are collected during Docker build process"
+    log "Skipping collectstatic as it's already handled in the Dockerfile"
+    return 0
 }
 
 # Main deployment function
@@ -210,12 +200,15 @@ deploy() {
         --log-driver json-file \
         --log-opt max-size=10m \
         --log-opt max-file=3 \
-        -v $(pwd)/data:/app/data \
-        -v $(pwd)/logs:/app/logs \
-        -v $(pwd)/static:/app/static \
-        -v $(pwd)/media:/app/media \
+        -v $(pwd)/data:/letraz/data \
+        -v $(pwd)/logs:/letraz/logs \
+        -v $(pwd)/static:/letraz/static \
+        -v $(pwd)/media:/letraz/media \
         "$FULL_IMAGE_NAME" \
         --workers="$WORKERS"
+    
+    # Give the container a moment to start up
+    sleep 10
     
     # Wait for the new container to be healthy
     if wait_for_health $HEALTH_CHECK_TIMEOUT $HEALTH_CHECK_INTERVAL; then
