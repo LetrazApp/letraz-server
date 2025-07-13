@@ -1,0 +1,353 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@2.7.1
+  python: circleci/python@2.1.1
+
+parameters:
+  run-build-deploy:
+    type: boolean
+    default: false
+  docker-tag:
+    type: string
+    default: "latest"
+
+# Reusable job configuration for common environment variables
+common_env: &common_env
+  environment:
+    - PYTHON_VERSION: "3.12"
+    - DOCKER_REGISTRY: "ghcr.io/letrazapp"
+    - IMAGE_NAME: "letraz-server"
+
+# Common Docker login step
+docker_login: &docker_login
+  run:
+    name: Login to GitHub Container Registry
+    command: |
+      echo "Logging in to GitHub Container Registry..."
+      
+      # Debug: Check if environment variables are set
+      if [ -z "$GITHUB_USERNAME" ]; then
+        echo "ERROR: GITHUB_USERNAME is not set"
+        exit 1
+      fi
+      
+      if [ -z "$GITHUB_TOKEN" ]; then
+        echo "ERROR: GITHUB_TOKEN is not set"
+        exit 1
+      fi
+      
+      echo "GitHub Username: $GITHUB_USERNAME"
+      echo "GitHub Token: [REDACTED - ${#GITHUB_TOKEN} characters]"
+      
+      # Perform login with explicit error handling
+      echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
+      
+      if [ $? -eq 0 ]; then
+        echo "Successfully logged in to GitHub Container Registry"
+      else
+        echo "Failed to login to GitHub Container Registry"
+        exit 1
+      fi
+
+jobs:
+  # Job to run tests and linting
+  test:
+    docker:
+      - image: cimg/python:3.12
+    <<: *common_env
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+          app-dir: .
+      - run:
+          name: Install uv
+          command: |
+            pip install uv
+      - run:
+          name: Install dependencies
+          command: |
+            uv sync
+      - run:
+          name: Run Django tests
+          command: |
+            echo "Running Django tests..."
+            uv run python manage.py test
+      - run:
+          name: Run linting
+          command: |
+            echo "Running Python linting..."
+            uv run python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+            uv run python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics || true
+      - run:
+          name: Check Django configuration
+          command: |
+            echo "Checking Django configuration..."
+            uv run python manage.py check --deploy || true
+            uv run python manage.py collectstatic --noinput --dry-run
+
+  # Job to build AMD64 Docker image
+  build-amd64:
+    docker:
+      - image: cimg/base:2024.02
+    <<: *common_env
+    resource_class: large
+    parameters:
+      docker-tag:
+        type: string
+        default: "latest"
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - *docker_login
+      - run:
+          name: Build AMD64 Docker image
+          command: |
+            echo "Building AMD64 Docker image..."
+            docker build \
+              --platform linux/amd64 \
+              --cache-from ${DOCKER_REGISTRY}/${IMAGE_NAME}:cache-amd64 \
+              --tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-amd64 \
+              --tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-amd64 \
+              .
+      - run:
+          name: Push AMD64 Docker image
+          command: |
+            echo "Pushing AMD64 Docker image..."
+            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-amd64
+            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-amd64
+      - run:
+          name: Send build failure notification
+          command: |
+            MESSAGE="❌ AMD64 build failed for letraz-server:<< parameters.docker-tag >>"
+            if [ -n "$WEBHOOK_URL" ]; then
+              curl -X POST -H "Content-Type: application/json" \
+                -d "{\"text\": \"$MESSAGE\", \"tag\": \"<< parameters.docker-tag >>\", \"branch\": \"$CIRCLE_BRANCH\"}" \
+                $WEBHOOK_URL
+            fi
+            echo "Build failure notification sent: $MESSAGE"
+          when: on_fail
+
+  # Job to build ARM64 Docker image
+  build-arm64:
+    machine:
+      image: ubuntu-2204:2024.01.1
+    resource_class: arm.medium
+    <<: *common_env
+    parameters:
+      docker-tag:
+        type: string
+        default: "latest"
+    steps:
+      - checkout
+      - *docker_login
+      - run:
+          name: Build ARM64 Docker image
+          command: |
+            echo "Building ARM64 Docker image..."
+            docker build \
+              --platform linux/arm64 \
+              --cache-from ${DOCKER_REGISTRY}/${IMAGE_NAME}:cache-arm64 \
+              --tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-arm64 \
+              --tag ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-arm64 \
+              .
+      - run:
+          name: Push ARM64 Docker image
+          command: |
+            echo "Pushing ARM64 Docker image..."
+            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-arm64
+            docker push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-arm64
+      - run:
+          name: Send build failure notification
+          command: |
+            MESSAGE="❌ ARM64 build failed for letraz-server:<< parameters.docker-tag >>"
+            if [ -n "$WEBHOOK_URL" ]; then
+              curl -X POST -H "Content-Type: application/json" \
+                -d "{\"text\": \"$MESSAGE\", \"tag\": \"<< parameters.docker-tag >>\", \"branch\": \"$CIRCLE_BRANCH\"}" \
+                $WEBHOOK_URL
+            fi
+            echo "Build failure notification sent: $MESSAGE"
+          when: on_fail
+
+  # Job to create and push multi-platform manifest
+  create-manifest:
+    docker:
+      - image: cimg/base:2024.02
+    <<: *common_env
+    parameters:
+      docker-tag:
+        type: string
+        default: "latest"
+    steps:
+      - *docker_login
+      - run:
+          name: Create and push multi-platform manifest
+          command: |
+            echo "Creating multi-platform manifest..."
+            
+            # Create manifest for commit SHA tag
+            docker manifest create ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >> \
+              ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-amd64 \
+              ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>-arm64
+            
+            # Create manifest for latest tag
+            docker manifest create ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest \
+              ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-amd64 \
+              ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest-arm64
+            
+            # Push manifests
+            docker manifest push ${DOCKER_REGISTRY}/${IMAGE_NAME}:<< parameters.docker-tag >>
+            docker manifest push ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
+            
+            echo "Multi-platform manifest created and pushed successfully"
+
+  # Job to deploy to production server
+  deploy:
+    docker:
+      - image: cimg/base:2024.02
+    <<: *common_env
+    parameters:
+      docker-tag:
+        type: string
+        default: "latest"
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "$SSH_FINGERPRINT"
+      - run:
+          name: Add production server to known hosts
+          command: |
+            echo "Adding production server to known hosts..."
+            mkdir -p ~/.ssh
+            ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+      - run:
+          name: Deploy to production
+          command: |
+            echo "Deploying to production server..."
+            
+            # Ensure app directory exists
+            ssh $SSH_USER@$SSH_HOST "mkdir -p ~/app"
+            
+            # Copy deployment script to app directory
+            scp .circleci/deploy.sh $SSH_USER@$SSH_HOST:~/app/deploy.sh
+            
+            # Make deployment script executable and run from app directory
+            ssh $SSH_USER@$SSH_HOST "cd ~/app && chmod +x deploy.sh && ./deploy.sh << parameters.docker-tag >>"
+      - run:
+          name: Verify deployment
+          command: |
+            echo "Verifying deployment..."
+            
+            # Wait for service to be ready
+            sleep 30
+            
+            # Check health endpoint and deployment status
+            ssh $SSH_USER@$SSH_HOST "cd ~/app && curl -f http://localhost:8000/health || echo 'Health endpoint not available' && ./deploy.sh --status"
+            
+            echo "Deployment verification completed"
+      - run:
+          name: Send failure notification
+          command: |
+            echo "Sending failure notification..."
+            
+            MESSAGE="❌ Deployment failed for letraz-server:<< parameters.docker-tag >>"
+            
+            # Send notification via webhook (if configured)
+            if [ -n "$WEBHOOK_URL" ]; then
+              curl -X POST -H "Content-Type: application/json" \
+                -d "{\"text\": \"$MESSAGE\", \"tag\": \"<< parameters.docker-tag >>\", \"branch\": \"$CIRCLE_BRANCH\"}" \
+                $WEBHOOK_URL
+            fi
+            
+            echo "Failure notification sent: $MESSAGE"
+          when: on_fail
+
+  # Job to send notifications
+  notify:
+    docker:
+      - image: cimg/base:2024.02
+    parameters:
+      status:
+        type: string
+        default: "success"
+      docker-tag:
+        type: string
+        default: "latest"
+    steps:
+      - run:
+          name: Send notification
+          command: |
+            echo "Sending << parameters.status >> notification..."
+            
+            if [ "<< parameters.status >>" = "success" ]; then
+              MESSAGE="✅ Deployment successful for letraz-server:<< parameters.docker-tag >>"
+            else
+              MESSAGE="❌ Deployment failed for letraz-server:<< parameters.docker-tag >>"
+            fi
+            
+            # Send notification via webhook (if configured)
+            if [ -n "$WEBHOOK_URL" ]; then
+              curl -X POST -H "Content-Type: application/json" \
+                -d "{\"text\": \"$MESSAGE\", \"tag\": \"<< parameters.docker-tag >>\", \"branch\": \"$CIRCLE_BRANCH\"}" \
+                $WEBHOOK_URL
+            fi
+            
+            echo "Notification sent: $MESSAGE"
+
+workflows:
+  # Test workflow (runs on all branches)
+  test-only:
+    when:
+      not: << pipeline.parameters.run-build-deploy >>
+    jobs:
+      - test
+
+  # Full build and deploy workflow (runs on main branch only)
+  build-and-deploy:
+    when: << pipeline.parameters.run-build-deploy >>
+    jobs:
+      # Test first
+      - test
+      
+      # Build both architectures in parallel
+      - build-amd64:
+          docker-tag: << pipeline.parameters.docker-tag >>
+          requires:
+            - test
+          context:
+            - server-prod
+      
+      - build-arm64:
+          docker-tag: << pipeline.parameters.docker-tag >>
+          requires:
+            - test
+          context:
+            - server-prod
+      
+      # Create multi-platform manifest
+      - create-manifest:
+          docker-tag: << pipeline.parameters.docker-tag >>
+          requires:
+            - build-amd64
+            - build-arm64
+          context:
+            - server-prod
+      
+      # Deploy to production
+      - deploy:
+          docker-tag: << pipeline.parameters.docker-tag >>
+          requires:
+            - create-manifest
+          context:
+            - server-prod
+      
+      # Send success notification
+      - notify:
+          name: notify-success
+          status: "success"
+          docker-tag: << pipeline.parameters.docker-tag >>
+          requires:
+            - deploy 
