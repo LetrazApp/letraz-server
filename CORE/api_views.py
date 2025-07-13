@@ -12,6 +12,7 @@ from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
 from letraz_server import settings
 from letraz_server.settings import PROJECT_NAME
+from letraz_server.contrib.sdks.knock import KnockSDK
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -99,7 +100,7 @@ def error_list_example(request):
     tags=['Waitlist'],
     auth=[],
     summary="Add a new waitlist",
-    description="Send a POST request with the email of the user and optionally a ref string to add a new waitlist entry. Returns the newly created waitlist entry with the waiting number and created_at timestamp.",
+    description="Send a POST request with the email of the user and optionally a ref string to add a new waitlist entry. Returns the newly created waitlist entry with the waiting number and created_at timestamp. A corresponding Knock user will also be created with the same ID and email.",
     request=WaitlistSerializer,
     responses={
         201: WaitlistSerializer,
@@ -117,6 +118,35 @@ def waitlist_crud(request):
             waitlist_serializer: WaitlistSerializer = WaitlistSerializer(data=request.data)
             if waitlist_serializer.is_valid():
                 waitlist: Waitlist = waitlist_serializer.save()
+                
+                # Create corresponding Knock user
+                try:
+                    knock_sdk = KnockSDK(api_key=settings.KNOCK_API_KEY)
+                    if knock_sdk.is_available():
+                        # Prepare user properties for Knock
+                        user_properties = {
+                            'email_address': waitlist.email,
+                            'created_via': 'waitlist',
+                            'waiting_number': waitlist.waiting_number
+                        }
+                        
+                        # Create user in Knock with waitlist ID as user ID
+                        success = knock_sdk.identify_user(
+                            user_id=str(waitlist.id),
+                            properties=user_properties
+                        )
+                        
+                        if success:
+                            logger.info(f"Successfully created Knock user for waitlist entry {waitlist.id}")
+                        else:
+                            logger.warning(f"Failed to create Knock user for waitlist entry {waitlist.id}")
+                    else:
+                        logger.warning("Knock SDK not available - skipping user creation")
+                        
+                except Exception as knock_error:
+                    # Log the error but don't fail the waitlist creation
+                    logger.error(f"Error creating Knock user for waitlist entry {waitlist.id}: {str(knock_error)}")
+                
                 return Response(WaitlistSerializer(waitlist).data, status=status.HTTP_201_CREATED)
             else:
                 return ErrorResponse(

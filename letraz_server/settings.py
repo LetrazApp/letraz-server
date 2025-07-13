@@ -83,6 +83,11 @@ if not KNOCK_API_KEY:
     KNOCK_STATUS = 'DOWN'
     logger.error('Knock API_KEY is not provided!')
 
+# Admin API Configuration
+ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
+if not ADMIN_API_KEY:
+    logger.warning('ADMIN_API_KEY is not provided! Admin endpoints will be disabled.')
+
 # Django Rest Framework Settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

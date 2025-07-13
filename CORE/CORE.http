@@ -11,12 +11,41 @@ GET https://{{url}}/api/v1/error-list-example/
 GET https://{{url}}/api/v1/waitlist/
 
 ### Create Waitlist API
+# Creates a waitlist entry and automatically creates a corresponding Knock user
+# with the same ID and email for future notifications
 POST https://{{url}}/api/v1/waitlist/
 Content-Type: application/json
 
 {
-    "email": "test2@letraz.app",
+    "email": "test5@letraz.app",
     "referrer": "website"
+}
+
+### [ADMIN] Get All Waitlist Entries API
+GET https://{{url}}/api/v1/admin/waitlist/
+Content-Type: application/json
+x-admin-api-key: {{admin_api_key}}
+
+### [ADMIN] Update Waitlist Entry API
+POST https://{{url}}/api/v1/admin/waitlist/123e4567-e89b-12d3-a456-426614174000/
+Content-Type: application/json
+x-admin-api-key: {{admin_api_key}}
+
+{
+    "has_access": true
+}
+
+### [ADMIN] Bulk Update Waitlist Entries API
+POST https://{{url}}/api/v1/admin/waitlist/bulk-update/
+Content-Type: application/json
+x-admin-api-key: {{admin_api_key}}
+
+{
+    "waitlist_ids": [
+        "123e4567-e89b-12d3-a456-426614174000",
+        "987fcdeb-51a2-43d1-b789-123456789abc"
+    ],
+    "has_access": true
 }
 
 ### Get all global skills API
