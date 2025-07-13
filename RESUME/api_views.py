@@ -1066,7 +1066,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             return self.error
         try:
             payload: dict = request.data
-            new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Project)
+            new_resume_section = self.resume.create_section(section_type=ResumeSection.ResumeSectionType.Certification)
             payload['resume_section'] = new_resume_section.id
             payload['user'] = self.authenticated_user.id
             certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(data=payload)
@@ -1115,7 +1115,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
         try:
             if not Certification.objects.filter(id=pk).exists():
                 return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Project not found!', details={'project': pk}
+                    code=ErrorCode.NOT_FOUND, message='Certification not found!', details={'certification': pk}
                 ).response
             existing_certification: Certification = Certification.objects.get(id=pk)
             payload: dict = request.data.copy()
