@@ -1,0 +1,61 @@
+setup: true
+
+version: 2.1
+
+orbs:
+  continuation: circleci/continuation@1.0.0
+
+jobs:
+  setup:
+    docker:
+      - image: cimg/base:2024.02
+    steps:
+      - checkout
+      - run:
+          name: Install required tools
+          command: |
+            # Install jq for JSON processing
+            sudo apt-get update
+            sudo apt-get install -y jq curl
+      - run:
+          name: Check branch and prepare configuration
+          command: |
+            echo "Current branch: $CIRCLE_BRANCH"
+            echo "Current commit: $CIRCLE_SHA1"
+            
+            # Generate Docker tag
+            if [ "$CIRCLE_BRANCH" = "main" ]; then
+              DOCKER_TAG=$(echo $CIRCLE_SHA1 | cut -c1-7)
+              echo "Main branch detected - will run full pipeline"
+              RUN_PIPELINE=true
+            else
+              DOCKER_TAG=$(echo $CIRCLE_BRANCH-$CIRCLE_SHA1 | cut -c1-20 | tr '/' '-')
+              echo "Feature branch detected - will run tests only"
+              RUN_PIPELINE=false
+            fi
+            
+            echo "Docker tag: $DOCKER_TAG"
+            echo "Run pipeline: $RUN_PIPELINE"
+            
+            # Create parameters file
+            cat > /tmp/pipeline-parameters.json \<< EOF
+            {
+              "run-build-deploy": $RUN_PIPELINE,
+              "docker-tag": "$DOCKER_TAG"
+            }
+            EOF
+            
+            echo "Generated parameters:"
+            cat /tmp/pipeline-parameters.json
+            
+            # Validate JSON
+            jq . /tmp/pipeline-parameters.json
+            
+      - continuation/continue:
+          configuration_path: .circleci/continue-config.yml
+          parameters: /tmp/pipeline-parameters.json
+
+workflows:
+  setup-workflow:
+    jobs:
+      - setup 
