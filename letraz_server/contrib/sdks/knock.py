@@ -435,6 +435,44 @@ class KnockSDK:
             logger.error(f"Error ensuring Knock customer exists for user {user.id}: {str(e)}")
             return False
             
+    def trigger_workflow(self, workflow_key: str, user_id: str, data: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        Trigger a workflow for a specific user in Knock.
+        
+        Args:
+            workflow_key: The key of the workflow to trigger
+            user_id: The ID of the user to trigger the workflow for
+            data: Optional data to pass to the workflow
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not self.client:
+            logger.error("Knock client not initialized - API key missing")
+            return False
+            
+        if not workflow_key:
+            logger.error("Workflow key is required")
+            return False
+            
+        if not user_id:
+            logger.error("User ID is required")
+            return False
+            
+        try:
+            # Trigger the workflow
+            self.client.workflows.trigger(
+                key=workflow_key,
+                recipients=[user_id],
+                data=data or {}
+            )
+            logger.info(f"Successfully triggered workflow '{workflow_key}' for user {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to trigger workflow '{workflow_key}' for user {user_id}: {str(e)}")
+            return False
+    
     def is_available(self) -> bool:
         """
         Check if the Knock SDK is properly configured and available.

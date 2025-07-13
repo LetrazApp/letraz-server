@@ -11,6 +11,7 @@ from CORE.serializers import WaitlistSerializer, WaitlistUpdateSerializer, Waitl
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.contrib.admin_auth import admin_api_key_required
+from letraz_server.contrib.sdks.knock import KnockSDK
 from letraz_server import settings
 from letraz_server.settings import PROJECT_NAME
 
@@ -91,9 +92,43 @@ def admin_waitlist_update(request, waitlist_id):
         ).response
     
     try:
+        # Check if has_access is being updated from False to True
+        old_has_access = waitlist_entry.has_access
+        new_has_access = request.data.get('has_access')
+        
         update_serializer = WaitlistUpdateSerializer(waitlist_entry, data=request.data, partial=True)
         if update_serializer.is_valid():
             updated_waitlist = update_serializer.save()
+            
+            # Trigger welcome-flow workflow if has_access changed from False to True
+            if not old_has_access and new_has_access is True:
+                try:
+                    knock_sdk = KnockSDK(api_key=settings.KNOCK_API_KEY)
+                    if knock_sdk.is_available():
+                        # Use waitlist entry ID as the Knock user ID
+                        workflow_data = {
+                            'email': updated_waitlist.email,
+                            'waiting_number': updated_waitlist.waiting_number,
+                            'referrer': updated_waitlist.referrer
+                        }
+                        
+                        success = knock_sdk.trigger_workflow(
+                            workflow_key="welcome-flow",
+                            user_id=str(updated_waitlist.id),
+                            data=workflow_data
+                        )
+                        
+                        if success:
+                            logger.info(f"Successfully triggered welcome-flow workflow for waitlist entry {updated_waitlist.id}")
+                        else:
+                            logger.warning(f"Failed to trigger welcome-flow workflow for waitlist entry {updated_waitlist.id}")
+                    else:
+                        logger.warning("Knock SDK not available - skipping workflow trigger")
+                        
+                except Exception as knock_error:
+                    # Log the error but don't fail the update
+                    logger.error(f"Error triggering welcome-flow workflow for waitlist entry {updated_waitlist.id}: {str(knock_error)}")
+            
             return Response(WaitlistSerializer(updated_waitlist).data)
         else:
             return ErrorResponse(
@@ -166,8 +201,47 @@ def admin_waitlist_bulk_update(request):
                 details={'missing_ids': list(missing_ids)}
             ).response
         
+        # Get entries that will have has_access changed from False to True
+        entries_to_trigger_workflow = []
+        if has_access is True:
+            entries_to_trigger_workflow = list(waitlist_entries.filter(has_access=False))
+        
         # Update all entries
         updated_count = waitlist_entries.update(has_access=has_access)
+        
+        # Trigger welcome-flow workflow for entries that changed from False to True
+        if entries_to_trigger_workflow:
+            try:
+                knock_sdk = KnockSDK(api_key=settings.KNOCK_API_KEY)
+                if knock_sdk.is_available():
+                    for entry in entries_to_trigger_workflow:
+                        try:
+                            workflow_data = {
+                                'email': entry.email,
+                                'waiting_number': entry.waiting_number,
+                                'referrer': entry.referrer
+                            }
+                            
+                            success = knock_sdk.trigger_workflow(
+                                workflow_key="welcome-flow",
+                                user_id=str(entry.id),
+                                data=workflow_data
+                            )
+                            
+                            if success:
+                                logger.info(f"Successfully triggered welcome-flow workflow for waitlist entry {entry.id}")
+                            else:
+                                logger.warning(f"Failed to trigger welcome-flow workflow for waitlist entry {entry.id}")
+                                
+                        except Exception as knock_error:
+                            # Log the error but don't fail the bulk update
+                            logger.error(f"Error triggering welcome-flow workflow for waitlist entry {entry.id}: {str(knock_error)}")
+                else:
+                    logger.warning("Knock SDK not available - skipping workflow triggers")
+                    
+            except Exception as e:
+                # Log the error but don't fail the bulk update
+                logger.error(f"Error initializing Knock SDK for bulk workflow trigger: {str(e)}")
         
         # Return updated entries
         updated_entries = Waitlist.objects.filter(id__in=waitlist_ids)
