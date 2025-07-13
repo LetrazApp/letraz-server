@@ -96,11 +96,19 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
                             user.last_login = info["last_login"]
                         user.save()
 
-                        # Create customer in Knock after successful user creation
+                        # Create customer in Knock with email conflict handling
                         if found:
-                            self.knock.create_customer_from_user_info(user.id, info)
+                            self._create_knock_customer_for_new_user(user, info)
                         else:
-                            self.knock.create_customer_from_user(user)
+                            # Even without Clerk info, we should handle email conflicts
+                            # Convert Django user to user_info format for consistency
+                            user_info_from_django = {
+                                'email_address': user.email or '',
+                                'first_name': user.first_name or '',
+                                'last_name': user.last_name or '',
+                                'last_login': user.last_login
+                            }
+                            self._create_knock_customer_for_new_user(user, user_info_from_django)
 
                 return user
         except jwt.ExpiredSignatureError:
@@ -113,3 +121,21 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
             logger.exception(e)
             raise AuthenticationFailed("Unexpected Token decode error!")
         return None
+
+    def _create_knock_customer_for_new_user(self, user, user_info: dict) -> bool:
+        """
+        Create a customer in Knock for a new user with email conflict handling.
+        
+        Args:
+            user: The Django User instance
+            user_info: Dict containing user information from Clerk
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Use the new email conflict handling method
+            return self.knock.create_customer_with_email_conflict_handling(user.id, user_info)
+        except Exception as e:
+            logger.error(f"Failed to create Knock customer for user {user.id}: {str(e)}")
+            return False
