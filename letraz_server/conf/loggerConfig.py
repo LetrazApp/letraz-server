@@ -75,7 +75,6 @@ class LoggingConfig:
                 f'{self.__LOG_FILE_INITIAL}': {
                     'handlers': ['development_logfile', 'production_logfile', 'production_console'],
                     'level': 'DEBUG',
-                    'propagate': False,
                 },
                 'dba': {
                     'handlers': ['dba_logfile'],
@@ -83,32 +82,22 @@ class LoggingConfig:
                 'django': {
                     'handlers': ['development_logfile', 'production_logfile', 'production_console'],
                     'level': 'INFO',
-                    'propagate': False,
                 },
                 'django.request': {
-                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'handlers': ['production_console'],
                     'level': 'INFO',
-                    'propagate': False,
                 },
                 'django.server': {
-                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'handlers': ['production_console'],
                     'level': 'INFO',
-                    'propagate': False,
-                },
-                'django.db.backends': {
-                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
-                    'level': 'WARNING',
-                    'propagate': False,
                 },
                 'gunicorn.error': {
                     'handlers': ['production_console'],
                     'level': 'INFO',
-                    'propagate': False,
                 },
                 'gunicorn.access': {
                     'handlers': ['production_console'],
                     'level': 'INFO',
-                    'propagate': False,
                 },
                 'py.warnings': {
                     'handlers': ['development_logfile'],
