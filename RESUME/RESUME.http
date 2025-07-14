@@ -11,6 +11,11 @@ Cookie: __session={{token}}
 GET https://{{url}}/api/v1/resume/base/
 Cookie: __session={{token}}
 
+### [ADMIN] Get Resume Data API
+GET https://{{url}}/api/v1/admin/resumes/{{resume_id}}/
+Content-Type: application/json
+x-admin-api-key: {{admin_api_key}}
+
 ## Education ##
 ### GET All Education by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/education/
@@ -57,147 +62,123 @@ Cookie: __session={{token}}
 Content-Type: application/json
 
 {
-    "resume_section": "b604e2bb-200d-4ee9-b7fc-3348ec9d4d2b",
-    "company_name": "Zillow Group",
-    "job_title": "Senior Software Engineer",
-    "employment_type": "flt",
-    "city": "New York",
-    "country": null,
-    "started_from_month": null,
-    "started_from_year": null,
-    "finished_at_month": null,
-    "finished_at_year": null,
-    "current": false,
-    "description": "o Leading and mentoring a team of developers across fullstack to support and enhance NYC's leading real \r\nestate marketplace StreetEasy.\r\no Design architecture for internal management tools, digital ad products, authentication, logging and consolidated billing system to provide scalable tools for smooth and convenient real estate buying/renting experience, marketing and communication tool for real estate agents and brokers.\r\no Stack – Ruby on Rails (w/ GraphQL API), JavaScript (w/ ReactJS), CSS, MySQL, Elasticsearch"
-  }
+  "company_name": "Letraz",
+  "job_title": "Software Engineer",
+  "employment_type": "flt",
+  "city": "Mumbai",
+  "country": "IND",
+  "started_from_month": null,
+  "started_from_year": null,
+  "finished_at_month": null,
+  "finished_at_year": null,
+  "current": true,
+  "description": "Software Engineer Role"
+}
 
-### GET Experience by id API
+### Delete Experience API
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/experience/{{experience_id}}/
 Cookie: __session={{token}}
 
-
-## SKILL ##
-### GET All Skill of the resumeAPI
+## Skills ##
+### GET All Skills by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/skill/
 Cookie: __session={{token}}
 
-### Add Skill to resume API
+### Add Skill API
 POST https://{{url}}/api/v1/resume/{{resume_id}}/skill/
 Cookie: __session={{token}}
 Content-Type: application/json
 
 {
-    "name": "React",
-    "category": "Frontend",
-    "level": "EXP"
+  "name": "Python",
+  "category": "Programming Language",
+  "level": "ADV"
 }
 
-### Update Skill in resume API
-PATCH https://{{url}}/api/v1/resume/{{resume_id}}/skill/3a79e75d-23bd-48e2-8520-95793ddf4ff8/
-Cookie: __session={{token}}
-Content-Type: application/json
-
-{
-    "name": "Python"
-}
-
-### Remove Skill from resume API
+### Delete Skill API
 DELETE https://{{url}}/api/v1/resume/{{resume_id}}/skill/{{skill_id}}/
 Cookie: __session={{token}}
 
-### Get all categories Skill-proficiency for resume API
-GET https://{{url}}/api/v1/resume/{{resume_id}}/skill/categories/
-Cookie: __session={{token}}
-
-## Project ##
-### GET all Project of the resumeAPI
+## Projects ##
+### GET All Projects by resume id API
 GET https://{{url}}/api/v1/resume/{{resume_id}}/project/
 Cookie: __session={{token}}
 
-### Add Project to resume API
+### GET Project by id API
+GET https://{{url}}/api/v1/resume/{{resume_id}}/project/{{project_id}}/
+Cookie: __session={{token}}
+
+### Create Project API
 POST https://{{url}}/api/v1/resume/{{resume_id}}/project/
 Cookie: __session={{token}}
 Content-Type: application/json
 
 {
-    "skills_used": [
-        {
-            "category": "Frontend",
-            "name": "Next.js"
-        },
-        {
-            "category": "Backend",
-            "name": "Ruby on Rails"
-        }
-    ],
-    "category": "Forex Trading",
-    "name": "Banking system for CITI Bank",
-    "description": "Worked in foreign-exchange system development project for a US based multinational banking client Effectively communicated with the client to understand business requirements and transformed them into technical requirements Developed the Forex system with REST API based Java Spring Boot microservice architecture Handled transformation of large datasets and ingestion in Kafka with python (django)",
-    "role": "Assosiate Insultant",
-    "github_url": "https://letraz.app",
-    "live_url": "https://subhajit.lol",
-    "started_from_month": 1,
-    "started_from_year": 2021,
-    "finished_at_month": 11,
-    "finished_at_year": 2022,
-    "current": false
+  "name": "Letraz Backend",
+  "description": "Django backend for Letraz application",
+  "category": "Web Development",
+  "role": "Backend Developer",
+  "github_url": "https://github.com/letraz/letraz-server",
+  "live_url": "https://api.letraz.app",
+  "started_from_month": 1,
+  "started_from_year": 2025,
+  "finished_at_month": null,
+  "finished_at_year": null,
+  "current": true
 }
 
-### Update a Project by id
-PATCH https://{{url}}/api/v1/resume/{{resume_id}}/project/
+### Delete Project API
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/project/{{project_id}}/
+Cookie: __session={{token}}
+
+## Certifications ##
+### GET All Certifications by resume id API
+GET https://{{url}}/api/v1/resume/{{resume_id}}/certification/
+Cookie: __session={{token}}
+
+### GET Certification by id API
+GET https://{{url}}/api/v1/resume/{{resume_id}}/certification/{{certification_id}}/
+Cookie: __session={{token}}
+
+### Create Certification API
+POST https://{{url}}/api/v1/resume/{{resume_id}}/certification/
 Cookie: __session={{token}}
 Content-Type: application/json
 
 {
-    "skills_used": [
-        {
-            "category": "Frontend",
-            "name": "Next.js"
-        },
-        {
-            "category": "Backend",
-            "name": "Ruby on Rails"
-        }
-    ],
-    "category": "Forex Trading",
-    "name": "Banking system for CITI Bank",
-    "description": "Worked in foreign-exchange system development project for a US based multinational banking client Effectively communicated with the client to understand business requirements and transformed them into technical requirements Developed the Forex system with REST API based Java Spring Boot microservice architecture Handled transformation of large datasets and ingestion in Kafka with python (django)",
-    "role": "Assosiate Insultant",
-    "github_url": "https://letraz.app",
-    "live_url": "https://subhajit.lol",
-    "started_from_month": 1,
-    "started_from_year": 2021,
-    "finished_at_month": 11,
-    "finished_at_year": 2022,
-    "current": false
+  "name": "AWS Certified Developer",
+  "issuing_organization": "Amazon Web Services",
+  "issue_date": "2025-01-01",
+  "credential_url": "https://aws.amazon.com/certification/"
 }
 
-### Delete a Project by id
-DELETE https://{{url}}/api/v1/resume/{{resume_id}}/project/
+### Delete Certification API
+DELETE https://{{url}}/api/v1/resume/{{resume_id}}/certification/{{certification_id}}/
+Cookie: __session={{token}}
+
+## Resume Sections ##
+### Rearrange Resume Sections API
+PUT https://{{url}}/api/v1/resume/{{resume_id}}/sections/rearrange/
 Cookie: __session={{token}}
 Content-Type: application/json
-
-### Rearrange Resume Sections
-PUT {{BASE_URL}}/resume/{{resume_id}}/sections/rearrange/
-Content-Type: application/json
-Authorization: Bearer {{token}}
 
 {
   "section_ids": [
-    "550e8400-e29b-41d4-a716-446655440001",
-    "550e8400-e29b-41d4-a716-446655440002", 
-    "550e8400-e29b-41d4-a716-446655440003"
+    "section-id-1",
+    "section-id-2",
+    "section-id-3"
   ]
 }
 
-### Rearrange Base Resume Sections
-PUT {{BASE_URL}}/resume/base/sections/rearrange/
+### Rearrange Base Resume Sections API
+PUT https://{{url}}/api/v1/resume/base/sections/rearrange/
+Cookie: __session={{token}}
 Content-Type: application/json
-Authorization: Bearer {{token}}
 
 {
   "section_ids": [
-    "550e8400-e29b-41d4-a716-446655440001",
-    "550e8400-e29b-41d4-a716-446655440002"
+    "section-id-1",
+    "section-id-2",
+    "section-id-3"
   ]
 }
