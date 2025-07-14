@@ -34,7 +34,7 @@ class LoggingConfig:
                     'formatter': 'simple'
                 },
                 'production_console': {
-                    'level': 'INFO',
+                    'level': 'DEBUG',
                     'filters': ['require_debug_false'],
                     'class': 'logging.StreamHandler',
                     'formatter': 'simple'
@@ -74,12 +74,41 @@ class LoggingConfig:
             'loggers': {
                 f'{self.__LOG_FILE_INITIAL}': {
                     'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'level': 'DEBUG',
+                    'propagate': False,
                 },
                 'dba': {
                     'handlers': ['dba_logfile'],
                 },
                 'django': {
                     'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'level': 'INFO',
+                    'propagate': False,
+                },
+                'django.request': {
+                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'level': 'INFO',
+                    'propagate': False,
+                },
+                'django.server': {
+                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'level': 'INFO',
+                    'propagate': False,
+                },
+                'django.db.backends': {
+                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
+                    'level': 'WARNING',
+                    'propagate': False,
+                },
+                'gunicorn.error': {
+                    'handlers': ['production_console'],
+                    'level': 'INFO',
+                    'propagate': False,
+                },
+                'gunicorn.access': {
+                    'handlers': ['production_console'],
+                    'level': 'INFO',
+                    'propagate': False,
                 },
                 'py.warnings': {
                     'handlers': ['development_logfile'],
