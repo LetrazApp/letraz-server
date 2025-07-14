@@ -179,6 +179,12 @@ deploy() {
         --log-driver json-file \
         --log-opt max-size=10m \
         --log-opt max-file=3 \
+        --log-opt tag="letraz-server-{{.ImageName}}" \
+        --log-opt labels="app,environment,service" \
+        --label app="letraz-server" \
+        --label environment="production" \
+        --label service="django-web" \
+        --label version="${DOCKER_TAG}" \
         -v $(pwd)/data:/letraz/data \
         -v $(pwd)/logs:/letraz/logs \
         -v $(pwd)/static:/letraz/static \

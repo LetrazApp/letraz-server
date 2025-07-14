@@ -33,6 +33,12 @@ class LoggingConfig:
                     'class': 'logging.StreamHandler',
                     'formatter': 'simple'
                 },
+                'production_console': {
+                    'level': 'INFO',
+                    'filters': ['require_debug_false'],
+                    'class': 'logging.StreamHandler',
+                    'formatter': 'simple'
+                },
                 'development_logfile': {
                     'level': 'DEBUG',
                     'filters': ['require_debug_true'],
@@ -63,17 +69,17 @@ class LoggingConfig:
             },
             'root': {
                 'level': 'DEBUG',
-                'handlers': ['console'],
+                'handlers': ['console', 'production_console'],
             },
             'loggers': {
                 f'{self.__LOG_FILE_INITIAL}': {
-                    'handlers': ['development_logfile', 'production_logfile'],
+                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
                 },
                 'dba': {
                     'handlers': ['dba_logfile'],
                 },
                 'django': {
-                    'handlers': ['development_logfile', 'production_logfile'],
+                    'handlers': ['development_logfile', 'production_logfile', 'production_console'],
                 },
                 'py.warnings': {
                     'handlers': ['development_logfile'],
