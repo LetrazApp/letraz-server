@@ -52,13 +52,35 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
         return user, None
 
     def decode_jwt(self, token):
+        # First, decode the JWT header to get the kid
+        try:
+            header = jwt.get_unverified_header(token)
+            kid = header.get('kid')
+            if not kid:
+                logger.error('JWT header missing kid')
+                raise AuthenticationFailed('Invalid token: missing key ID')
+        except jwt.DecodeError as e:
+            logger.error(f'Failed to decode JWT header: {e}')
+            raise AuthenticationFailed('Invalid token format')
+        
+        # Get JWKS data
         jwks_data = self.clerk.get_jwks()
         try:
             if not jwks_data.get('keys'):
                 logger.error('Invalid JWKS: missing or empty keys array')
                 raise AuthenticationFailed('Invalid JWKS format')
             
-            jwk_data = jwks_data['keys'][0]
+            # Find the key that matches the kid
+            jwk_data = None
+            for key in jwks_data['keys']:
+                if key.get('kid') == kid:
+                    jwk_data = key
+                    break
+            
+            if not jwk_data:
+                logger.error(f'No matching key found for kid: {kid}')
+                raise AuthenticationFailed('Invalid token: key not found')
+            
             try:
                 jwk_str = json.dumps(jwk_data)
             except (TypeError, ValueError) as e:
@@ -117,13 +139,19 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
 
                 return user
         except jwt.ExpiredSignatureError:
+            logger.warning("JWT token has expired")
             raise AuthenticationFailed("Token has expired!")
         except jwt.DecodeError as e:
+            logger.error(f"JWT decode error: {e}")
             raise AuthenticationFailed("Token decode error!")
-        except jwt.InvalidTokenError:
+        except jwt.InvalidSignatureError as e:
+            logger.error(f"JWT signature verification failed: {e}")
+            raise AuthenticationFailed("Invalid token signature!")
+        except jwt.InvalidTokenError as e:
+            logger.error(f"JWT token validation failed: {e}")
             raise AuthenticationFailed("Invalid token!")
         except Exception as e:
-            logger.exception(e)
+            logger.exception(f"Unexpected JWT decode error: {e}")
             raise AuthenticationFailed("Unexpected Token decode error!")
         return None
 
