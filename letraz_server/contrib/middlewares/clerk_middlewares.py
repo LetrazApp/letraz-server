@@ -63,37 +63,65 @@ class ClerkAuthenticationMiddleware(BaseAuthentication):
             logger.error(f'Failed to decode JWT header: {e}')
             raise AuthenticationFailed('Invalid token format')
         
-        # Get JWKS data
-        jwks_data = self.clerk.get_jwks()
+        # Get the issuer from the JWT payload to determine the correct JWKS endpoint
         try:
+            payload = jwt.decode(token, options={"verify_signature": False, "verify_exp": False})
+            issuer = payload.get('iss')
+            if not issuer:
+                logger.error('JWT payload missing issuer')
+                raise AuthenticationFailed('Invalid token: missing issuer')
+        except jwt.DecodeError as e:
+            logger.error(f'Failed to decode JWT payload: {e}')
+            raise AuthenticationFailed('Invalid token format')
+        
+        # Get JWKS data using the issuer URL
+        try:
+            jwks_data = self.clerk.get_jwks_from_issuer(issuer)
+            logger.debug(f'JWKS data retrieved: {jwks_data}')
+        except Exception as e:
+            logger.error(f'Failed to get JWKS data: {str(e)}')
+            raise AuthenticationFailed(f'Failed to get JWKS data: {str(e)}')
+        
+        try:
+            if not jwks_data or not isinstance(jwks_data, dict):
+                logger.error('Invalid JWKS: not a valid dictionary')
+                raise AuthenticationFailed('Invalid JWKS format')
+            
             if not jwks_data.get('keys'):
                 logger.error('Invalid JWKS: missing or empty keys array')
                 raise AuthenticationFailed('Invalid JWKS format')
             
             # Find the key that matches the kid
             jwk_data = None
+            available_kids = []
             for key in jwks_data['keys']:
-                if key.get('kid') == kid:
+                key_kid = key.get('kid')
+                available_kids.append(key_kid)
+                if key_kid == kid:
                     jwk_data = key
                     break
             
             if not jwk_data:
-                logger.error(f'No matching key found for kid: {kid}')
+                logger.error(f'No matching key found for kid: {kid}. Available kids: {available_kids}')
                 raise AuthenticationFailed('Invalid token: key not found')
             
             try:
                 jwk_str = json.dumps(jwk_data)
+                logger.debug(f'JWK data for kid {kid}: {jwk_str}')
             except (TypeError, ValueError) as e:
                 logger.error(f'Failed to serialize JWK: {e}')
                 raise AuthenticationFailed('Invalid key format in JWKS')
                 
             public_key = RSAAlgorithm.from_jwk(jwk_str)
-        except IndexError:
-            logger.error('Invalid JWKS: keys array is empty')
-            raise AuthenticationFailed('Invalid JWKS format')
+            logger.debug(f'Successfully created public key for kid: {kid}')
+            
+        except AuthenticationFailed:
+            # Re-raise authentication errors
+            raise
         except Exception as e:
             logger.error(f'Failed to parse JWKS: {e}')
-            raise AuthenticationFailed('Failed to process JWKS')
+            logger.error(f'JWKS data: {jwks_data}')
+            raise AuthenticationFailed(f'Failed to process JWKS: {str(e)}')
         try:
             payload = jwt.decode(
                 token,
