@@ -4,10 +4,11 @@ from http import HTTPStatus
 
 from django.db.models import QuerySet
 from django.db import transaction
+from django.http.response import JsonResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets, serializers
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from CORE.serializers import ErrorSerializer
 from PROFILE.models import User
@@ -1184,3 +1185,10 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             )
             logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
             return error_response.response
+
+
+@api_view(['GET'])
+def call_grpc_view(request):
+
+    print("called")
+    return JsonResponse({'call': 'success'})
