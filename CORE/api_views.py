@@ -1,5 +1,4 @@
 import logging
-from rest_framework import serializers
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, OpenApiTypes
 from rest_framework import status
@@ -30,11 +29,11 @@ logger = logging.getLogger(__module_name)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):
-    response = {'status': 'OPERATIONAL', 'details': {
+    response = {'instance_id':  settings.INSTANCE_ID,'status': 'OPERATIONAL', 'details': {
         'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "db": settings.DB_STATUS, 'util_service': settings.UTIL_GRPC_CHANNEL_STATUS
     }}
     if not (settings.CLERK_STATUS == settings.DB_STATUS == settings.UTIL_GRPC_CHANNEL_STATUS == "OPERATIONAL"):
-        response = {'status': 'DEGRADED', 'details': {
+        response = {'instance_id':  settings.INSTANCE_ID,'status': 'DEGRADED', 'details': {
             'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "db": settings.DB_STATUS, 'util_service': settings.UTIL_GRPC_CHANNEL_STATUS
         }}
         logger.error(

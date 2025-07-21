@@ -9,7 +9,9 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import logging
 import socket
+import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -22,12 +24,14 @@ from letraz_server.contrib.validator.environment_validator import DBEnvironmentV
 
 load_dotenv()
 
+INSTANCE_ID = uuid.uuid4().__str__()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Settings logger - startup_errors.log
-startup_logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log', )
-
+startup_logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log', instance_id=INSTANCE_ID, logging_level=logging.INFO)
+startup_logger.info('Spinning up server...')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.environ.get('SECRET')).strip() if os.environ.get('SECRET') else get_random_secret_key()
 
@@ -287,3 +291,5 @@ if UTIL_GRPC_ERROR:
     startup_logger.exception(f'Error while connecting to util gRPC:util %s', UTIL_GRPC_ERROR, exc_info=True)
 else:
     startup_logger.info('Connected to gRPC:util.')
+
+startup_logger.info('Server started.\n')
