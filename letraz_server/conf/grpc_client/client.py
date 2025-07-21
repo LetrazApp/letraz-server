@@ -20,7 +20,7 @@ class GRPCClient:
     def connect(self):
         try:
             self.channel = grpc.secure_channel(target=self.target, credentials=self.credentials)
-            print(grpc.channel_ready_future(self.channel).result(5))
+            grpc.channel_ready_future(self.channel).result(5)
             self.status = "OPERATIONAL"
         except Exception as ex:
             self.status = "FAILED"
