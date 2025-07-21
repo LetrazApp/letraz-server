@@ -1185,10 +1185,3 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             )
             logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
             return error_response.response
-
-
-@api_view(['GET'])
-def call_grpc_view(request):
-
-    print("called")
-    return JsonResponse({'call': 'success'})

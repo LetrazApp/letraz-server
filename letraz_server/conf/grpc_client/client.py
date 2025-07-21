@@ -1,3 +1,4 @@
+import traceback
 import grpc
 
 
@@ -6,7 +7,7 @@ class GRPCClient:
         self.credentials = credentials
         self.target = target
         self.channel = None
-        self.status = "DISCONNECTED"
+        self.status = "UNINITIALIZED"
         self.exception = None
 
     def get_credentials(self):
@@ -19,22 +20,23 @@ class GRPCClient:
     def connect(self):
         try:
             self.channel = grpc.secure_channel(target=self.target, credentials=self.credentials)
-            print(grpc.channel_ready_future(self.channel))
-            if grpc.channel_ready_future(self.channel) == grpc.ChannelConnectivity.READY:
-                print('Connected to gRPC')
-                self.status = "OPERATIONAL"
-        except Exception as e:
-            print(e)
+            print(grpc.channel_ready_future(self.channel).result(5))
+            self.status = "OPERATIONAL"
+        except Exception as ex:
             self.status = "FAILED"
-            self.exception = e
+            self.exception = traceback.format_exc()
         return self
 
     def disconnect(self):
         if self.channel:
             self.channel.close()
             self.channel = None
+            self.status = "DISCONNECTED"
 
     def get_channel(self):
+        return self.channel
+
+    def get(self):
         return self.channel, self.status, self.exception
 
     def get_exception(self):

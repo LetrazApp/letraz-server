@@ -26,7 +26,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Settings logger - startup_errors.log
-startup_logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log')
+startup_logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log', )
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.environ.get('SECRET')).strip() if os.environ.get('SECRET') else get_random_secret_key()
@@ -280,10 +280,10 @@ if os.environ.get('SENTRY_DSN'):
         SENTRY_STATUS = 'FAILED'
 
 # GRPC Channels
-UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target='utils.letraz.app').connect().get_channel()
-startup_logger.info('Connecting to gRPC...')
+startup_logger.info('Connecting to gRPC:util...')
+UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target=os.environ.get('LOG_FOLDER', '')).connect().get()
 if UTIL_GRPC_ERROR:
     UTIL_GRPC_CHANNEL_STATUS = 'FAILED'
-    startup_logger.exception(f'Error while connecting to util gRPC %s', UTIL_GRPC_ERROR, exc_info=True)
+    startup_logger.exception(f'Error while connecting to util gRPC:util %s', UTIL_GRPC_ERROR, exc_info=True)
 else:
     startup_logger.info('Connected to gRPC:util.')

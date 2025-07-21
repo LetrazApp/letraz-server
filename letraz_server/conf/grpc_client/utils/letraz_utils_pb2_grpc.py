@@ -2,8 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 import warnings
-
-import letraz_utils_pb2 as letraz__utils__pb2
+from . import letraz_utils_pb2 as letraz__utils__pb2
 
 GRPC_GENERATED_VERSION = '1.73.1'
 GRPC_VERSION = grpc.__version__
