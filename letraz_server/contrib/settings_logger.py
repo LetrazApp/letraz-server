@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 # Create logs directory if it doesn't exist
-def get_settings_logger(BASE_DIR: Path, filename: str) -> logging.Logger:
+def get_settings_logger(BASE_DIR: Path, filename: str, instance_id: str, logging_level=logging.INFO ) -> logging.Logger:
     # Get the base directory path (same level as manage.py)
     logs_dir = BASE_DIR / 'logs'
 
@@ -17,8 +17,8 @@ def get_settings_logger(BASE_DIR: Path, filename: str) -> logging.Logger:
 
     # Basic logging setup
     logging.basicConfig(
-        level=logging.ERROR,
-        format='%(asctime)s [%(levelname)s] - %(message)s',
+        level=logging_level,
+        format=f'%(asctime)s [%(levelname)s] [instance_id - {instance_id}] - %(message)s',
         handlers=[
             logging.FileHandler(log_file),
             logging.StreamHandler()
