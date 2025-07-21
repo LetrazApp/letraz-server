@@ -281,7 +281,7 @@ if os.environ.get('SENTRY_DSN'):
 
 # GRPC Channels
 startup_logger.info('Connecting to gRPC:util...')
-UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target=os.environ.get('LOG_FOLDER', '')).connect().get()
+UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target=os.environ.get('UTIL_GRPC_HOST', '')).connect().get()
 if UTIL_GRPC_ERROR:
     UTIL_GRPC_CHANNEL_STATUS = 'FAILED'
     startup_logger.exception(f'Error while connecting to util gRPC:util %s', UTIL_GRPC_ERROR, exc_info=True)
