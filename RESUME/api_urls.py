@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework import routers
-
 from .api_views import ResumeViewSets, EducationViewSets, ExperienceViewSets, ResumeSkillViewSets, ResumeProjectViewSets, ResumeCertificationViewSets
 
 root_router = routers.DefaultRouter()

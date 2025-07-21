@@ -17,7 +17,7 @@ import sentry_sdk
 from letraz_server.conf.loggerConfig import LoggingConfig
 from letraz_server.contrib.settings_logger import get_settings_logger
 from django.core.management.utils import get_random_secret_key
-
+from letraz_server.conf.grpc_client.client import GRPCClient
 from letraz_server.contrib.validator.environment_validator import DBEnvironmentValidator
 
 load_dotenv()
@@ -26,7 +26,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Settings logger - startup_errors.log
-logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log')
+startup_logger = get_settings_logger(BASE_DIR=BASE_DIR, filename='Letraz_startup_errors.log', )
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.environ.get('SECRET')).strip() if os.environ.get('SECRET') else get_random_secret_key()
@@ -39,7 +39,7 @@ try:
     ALLOWED_HOSTS.append(socket.gethostbyname(socket.gethostname()))
     ALLOWED_HOSTS.append(socket.gethostbyname(socket.getfqdn()))
 except Exception as ex:
-    logger.exception('Encountered error while adding host\'s IP address/domain from socket: \n', ex)
+    startup_logger.exception('Encountered error while adding host\'s IP address/domain from socket: \n', ex)
 
 ALLOWED_HOSTS += list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(';')))
 
@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Cors header
     "corsheaders",
+    # GRPC
+    "django_grpc_framework",
 
     # Apps
     'CORE.apps.CoreConfig',
@@ -74,19 +76,19 @@ CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
 CLERK_FRONTEND_API_URL = os.environ.get('CLERK_FRONTEND_API_URL', '')
 if not CLERK_SECRET_KEY or not CLERK_FRONTEND_API_URL:
     CLERK_STATUS = 'DOWN'
-    logger.error('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
+    startup_logger.error('Clerk SECRET_KEY or FRONTEND_API_URL is not provided!')
 
 # Knock Configuration
 KNOCK_STATUS = 'OPERATIONAL'
 KNOCK_API_KEY = os.environ.get('KNOCK_API_KEY', '')
 if not KNOCK_API_KEY:
     KNOCK_STATUS = 'DOWN'
-    logger.error('Knock API_KEY is not provided!')
+    startup_logger.error('Knock API_KEY is not provided!')
 
 # Admin API Configuration
 ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
 if not ADMIN_API_KEY:
-    logger.warning('ADMIN_API_KEY is not provided! Admin endpoints will be disabled.')
+    startup_logger.warning('ADMIN_API_KEY is not provided! Admin endpoints will be disabled.')
 
 # Django Rest Framework Settings
 REST_FRAMEWORK = {
@@ -194,10 +196,10 @@ if os.environ.get('DB_ENGINE'):
             }
             DB_STATUS = 'OPERATIONAL'
         except Exception as e:
-            logger.exception('Exception occurred while connecting to db!')
+            startup_logger.exception('Exception occurred while connecting to db!')
             DB_STATUS = 'FATAL'
     else:
-        logger.error(f'Database environment validation failed! \n{dbEnvironmentValidator.errors.__str__()}')
+        startup_logger.error(f'Database environment validation failed! \n{dbEnvironmentValidator.errors.__str__()}')
         DB_STATUS = 'FATAL'
 else:
     DATABASES = {
@@ -274,5 +276,14 @@ if os.environ.get('SENTRY_DSN'):
         )
         SENTRY_STATUS = 'OPERATIONAL'
     except Exception as e:
-        logger.exception('Error while connecting to Sentry: %s', e)
+        startup_logger.exception('Error while connecting to Sentry: %s', e, exc_info=True)
         SENTRY_STATUS = 'FAILED'
+
+# GRPC Channels
+startup_logger.info('Connecting to gRPC:util...')
+UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target=os.environ.get('LOG_FOLDER', '')).connect().get()
+if UTIL_GRPC_ERROR:
+    UTIL_GRPC_CHANNEL_STATUS = 'FAILED'
+    startup_logger.exception(f'Error while connecting to util gRPC:util %s', UTIL_GRPC_ERROR, exc_info=True)
+else:
+    startup_logger.info('Connected to gRPC:util.')

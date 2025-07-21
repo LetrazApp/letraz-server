@@ -31,14 +31,14 @@ logger = logging.getLogger(__module_name)
 @permission_classes([AllowAny])
 def health_check(request):
     response = {'status': 'OPERATIONAL', 'details': {
-        'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "DB": settings.DB_STATUS
+        'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "db": settings.DB_STATUS, 'util_service': settings.UTIL_GRPC_CHANNEL_STATUS
     }}
-    if (not settings.CLERK_STATUS == 'OPERATIONAL') or (not settings.DB_STATUS == 'OPERATIONAL'):
+    if not (settings.CLERK_STATUS == settings.DB_STATUS == settings.UTIL_GRPC_CHANNEL_STATUS == "OPERATIONAL"):
         response = {'status': 'DEGRADED', 'details': {
-            'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "DB": settings.DB_STATUS
+            'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "db": settings.DB_STATUS, 'util_service': settings.UTIL_GRPC_CHANNEL_STATUS
         }}
         logger.error(
-            f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}, "DB": {settings.DB_STATUS}>')
+            f'status: OPERATIONAL, details: <sentry: {settings.SENTRY_STATUS}, "clerk": {settings.CLERK_STATUS}, "db": {settings.DB_STATUS}, "util_service": {settings.UTIL_GRPC_CHANNEL_STATUS}>')
         return Response(response, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     return Response(response, status=status.HTTP_200_OK)
 
