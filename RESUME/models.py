@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 from django.db.models import Q
 from django.core.validators import MinValueValidator, MaxValueValidator
-from CORE.models import Country, Skill
+from CORE.models import Country, Skill, Process
 from PROFILE.models import User
 from JOB.models import Job
 from nanoid import generate as generate_nanoid
@@ -26,12 +26,15 @@ class Resume(models.Model):
         help_text='The unique identifier for the resume entry.'
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the resume belongs to.')
-    job = models.ForeignKey(Job, on_delete=models.CASCADE, blank=True, null=True,
+    job = models.ForeignKey(Job, on_delete=models.SET_NULL, blank=True, null=True,
                             help_text='The job the resume is for. (optional in case it\'s a base resume for the user.)')
     base = models.BooleanField(default=False,
                                help_text='Whether the resume is a base resume for the user. One user can ')
     variations = models.ManyToManyField('Resume', related_name='related_resumes', blank=True)
     version = models.IntegerField(default=1, help_text='The version of the resume.')
+
+    processing = models.BooleanField(default=False)
+    process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True)
 
     class Meta:
         constraints = [

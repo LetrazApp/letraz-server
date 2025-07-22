@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Waitlist, Country, Skill
+from .models import Waitlist, Country, Skill, Process
 
 
 # Register your models here.
@@ -20,3 +20,10 @@ class CountryAdmin(admin.ModelAdmin):
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):
     list_display = ('id', 'category', 'name')
+
+
+@admin.register(Process)
+class ProcessAdmin(admin.ModelAdmin):
+    list_display = ('id', 'util_id', 'desc', 'status', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at', 'updated_at' )
+    search_fields = ('id', 'util_id', 'desc')
