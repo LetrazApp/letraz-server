@@ -7,7 +7,7 @@ class JobShortSerializer(serializers.ModelSerializer):
         model = Job
         fields = (
             'id', 'job_url', 'title', 'company_name', 'location',
-            'currency', 'salary_max', 'salary_min', 'description'
+            'currency', 'salary_max', 'salary_min', 'description', 'processing'
         )
         read_only_fields = ['id']
 
@@ -18,6 +18,6 @@ class JobFullSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'job_url', 'title', 'company_name', 'location',
             'currency', 'salary_max', 'salary_min', 'requirements',
-            'description', 'responsibilities', 'benefits'
+            'description', 'responsibilities', 'benefits', 'processing'
         )
         read_only_fields = ['id']

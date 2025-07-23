@@ -10,7 +10,7 @@ class ResumeShortSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job')
+        fields = ('id', 'base', 'user', 'job', 'processing')
         read_only_fields = ['id']
 
     @staticmethod
@@ -25,7 +25,7 @@ class ResumeFullSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'sections')
+        fields = ('id', 'base', 'user', 'job', 'processing', 'sections')
         read_only_fields = ['id']
 
     @staticmethod
