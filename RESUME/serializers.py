@@ -18,19 +18,14 @@ class ResumeShortSerializer(serializers.ModelSerializer):
         return JobShortSerializer(obj.job).data
 
 
-class ResumeFullSerializer(serializers.ModelSerializer):
-    job = serializers.SerializerMethodField()
+class BaseResumeFullSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     sections = serializers.SerializerMethodField()
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'processing', 'sections')
+        fields = ('id', 'base', 'user', 'sections')
         read_only_fields = ['id']
-
-    @staticmethod
-    def get_job(resume: Resume):
-        return JobFullSerializer(resume.job).data
 
     @staticmethod
     def get_user(resume: Resume):
@@ -41,7 +36,21 @@ class ResumeFullSerializer(serializers.ModelSerializer):
         return ResumeSectionFullSerializer(resume.resumesection_set.order_by('index'), many=True).data
 
 
+class ResumeFullSerializer(BaseResumeFullSerializer):
+    job = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Resume
+        fields = ('id', 'base', 'user', 'job', 'processing', 'sections')
+        read_only_fields = ['id']
+
+    @staticmethod
+    def get_job(resume: Resume):
+        return JobFullSerializer(resume.job).data
+
+
 class ResumeSectionFullSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
     data = serializers.SerializerMethodField()
 
@@ -49,6 +58,10 @@ class ResumeSectionFullSerializer(serializers.ModelSerializer):
         model = ResumeSection
         fields = ('id', 'resume', 'index', 'type', 'data')
         read_only_fields = ['id']
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
 
     @staticmethod
     def get_type(resume_section: ResumeSection):
@@ -83,14 +96,15 @@ class ResumeSectionFullSerializer(serializers.ModelSerializer):
         elif resume_section.type == ResumeSection.ResumeSectionType.Skill:
             if resume_section.proficiency_set.count() == 0:
                 resume_section.delete()
-                return None
+                return {'skills': []}
             else:
-                return ProficiencySerializer(resume_section.proficiency_set.all(), many=True).data
+                return {'skills': ProficiencySerializer(resume_section.proficiency_set.all(), many=True).data}
         else:
             return None
 
 
 class ResumeSectionShortSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
 
     class Meta:
@@ -99,11 +113,17 @@ class ResumeSectionShortSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
     def get_type(resume_section: ResumeSection):
         return resume_section.get_type_display()
 
 
 class EducationFullSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    resume_section = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
 
     class Meta:
@@ -117,17 +137,40 @@ class EducationFullSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
     def get_country(education: Education):
         return CountrySerializer(education.country).data if education.country else None
 
 
 class EducationUpsertSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
+    resume_section = serializers.SerializerMethodField()
+
     class Meta:
         model = Education
         fields = "__all__"
 
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
+
 
 class ExperienceFullSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
+    resume_section = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
     employment_type = serializers.SerializerMethodField()
 
@@ -141,6 +184,14 @@ class ExperienceFullSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
     def get_country(experience: Experience):
         return CountrySerializer(experience.country).data if experience.country else None
 
@@ -150,17 +201,34 @@ class ExperienceFullSerializer(serializers.ModelSerializer):
 
 
 class ExperienceUpsertSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
     class Meta:
         model = Experience
         fields = '__all__'
 
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
 
 class ProficiencySerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
+    resume_section = serializers.SerializerMethodField()
     skill = SkillSerializer()
 
     class Meta:
         model = Proficiency
         fields = ('id', 'skill', 'resume_section', 'level')
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
 
 
 class ResumeSkillUpsertSerializer(serializers.Serializer):
@@ -174,13 +242,23 @@ class ResumeSkillUpsertSerializer(serializers.Serializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     skills_used = SkillSerializer(many=True)
+    resume_section = serializers.SerializerMethodField()
     resume_section = ResumeSectionShortSerializer()
 
     class Meta:
         model = Project
         fields = '__all__'
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
 
 
 class SkillUpsertSerializer(serializers.Serializer):
@@ -189,21 +267,45 @@ class SkillUpsertSerializer(serializers.Serializer):
 
 
 class ProjectUpsertSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = '__all__'
 
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+
 class CertificationSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
+    resume_section = serializers.SerializerMethodField()
+
     class Meta:
         model = Certification
         fields = '__all__'
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
+
+    @staticmethod
+    def get_resume_section(resume_section: ResumeSection):
+        return str(resume_section.id)
 
 
 class CertificationUpsertSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+
     class Meta:
         model = Certification
         fields = '__all__'
+
+    @staticmethod
+    def get_id(resume_section: ResumeSection):
+        return str(resume_section.id)
 
 
 class SectionRearrangeSerializer(serializers.Serializer):

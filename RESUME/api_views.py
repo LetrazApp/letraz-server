@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from http import HTTPStatus
@@ -11,18 +12,23 @@ from google.protobuf.json_format import MessageToDict
 from CORE.models import Process
 from CORE.serializers import ErrorSerializer
 from JOB.models import Job
+from JOB.proto_serializers import JobFullProtoSerializer
+from JOB.serializers import JobFullSerializer, JobSerializer
 from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
+from RESUME.proto_serializers import ResumeFullProtoSerializer
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
-    CertificationUpsertSerializer, SectionRearrangeSerializer
+    CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer
 from letraz_server import settings
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2
+from google.protobuf.json_format import ParseDict
+from RESUME.serializers import ResumeSectionFullSerializer
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -1214,32 +1220,36 @@ def tailor_resume(request):
             sanitized_url_job_qs = Job.objects.filter(job_url=sanitized_url)
             if sanitized_url_job_qs.exists():
                 job = sanitized_url_job_qs.first()
+                if job.process:
+                    return ErrorResponse(code=ErrorCode.UNAVAILABLE, message='This service is temporarily unavailable please try after some time', status_code=503).response
                 job_resume_qs = Resume.objects.filter(job=job)
                 if job_resume_qs.exists():
                     return Response(ResumeFullSerializer(job_resume_qs.first(), many=False).data)
                 else:
                     new_resume_for_job = Resume.objects.create(job=job, user=request.user, processing=True)
                     # GRPC: Call Tailor-Resume RPC method to Util service
+                    base_resume = request.user.resume_set.get(base=True)
                     process = Process.objects.create(desc='Tailor Resume Process')
                     try:
                         resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
-                        req = letraz_utils_pb2.TailorResumeRequest()  # TODO: add request Body
+                        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeFullSerializer(base_resume, many=False).data, job=JobSerializer(job, many=False).data, resume_id=new_resume_for_job.id)
                         res = MessageToDict(resume_service.TailorResume(req))
-                        logger.debug(f'Scrapper Response: \n{res}')
+                        logger.debug(f'Tailor Resume Process: \n{res}')
                         process.status = res.get('status')
                         process.util_id = res.get('util_id')
                         process.status_details = res.get('message')
                         process.save()
+                        new_resume_for_job.process = process
+                        new_resume_for_job.save()
                     except Exception as e:
                         error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                         logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                         process.status = Process.ProcessType.Failed.value
                         process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                         process.save()
-                        new_resume_for_job.process = process
-                        new_resume_for_job.save()
+                        if new_resume_for_job:
+                            new_resume_for_job.delete()
                         return error_response.response
-
                     return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
             else:
                 new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', processing=True)
@@ -1263,12 +1273,15 @@ def tailor_resume(request):
                     process.status = Process.ProcessType.Failed.value
                     process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                     process.save()
+                    if new_job_obj:
+                        new_job_obj.delete()
+                    if new_resume_for_job:
+                        new_resume_for_job.delete()
                     return error_response.response
                 return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
         elif len(str(target.strip())) > 300:
             new_job_obj = Job.objects.create(title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', processing=True)
             new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, processing=True)
-            print('----------1270')
             # GRPC: Call Scrape-Job RPC method with Description to Util service
             process = Process.objects.create(desc='Scrape Job Process')
             try:
@@ -1288,6 +1301,10 @@ def tailor_resume(request):
                 process.status = Process.ProcessType.Failed.value
                 process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                 process.save()
+                if new_job_obj:
+                    new_job_obj.delete()
+                if new_resume_for_job:
+                    new_resume_for_job.delete()
                 return error_response.response
             return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
         else:
