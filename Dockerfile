@@ -26,8 +26,12 @@ RUN uv add gunicorn
 # Collect static files for Django application
 RUN python manage.py collectstatic --noinput
 
-# Expose application port
-EXPOSE 8000
+# Copy and make startup script executable
+COPY start-servers.sh .
+RUN chmod +x start-servers.sh
 
-# Start the application using Gunicorn WSGI server
-ENTRYPOINT ["gunicorn", "letraz_server.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Expose both REST API and gRPC ports
+EXPOSE 8000 50051
+
+# Start both servers using the startup script
+ENTRYPOINT ["./start-servers.sh"]
