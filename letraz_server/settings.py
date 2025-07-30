@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     # Cors header
     "corsheaders",
     # GRPC
-    "django_grpc_framework",
+    'django_socio_grpc',
 
     # Apps
     'CORE.apps.CoreConfig',
@@ -283,7 +283,12 @@ if os.environ.get('SENTRY_DSN'):
         startup_logger.exception('Error while connecting to Sentry: %s', e, exc_info=True)
         SENTRY_STATUS = 'FAILED'
 
-# GRPC Channels
+# GRPC Server Conf
+GRPC_FRAMEWORK = {
+    "ROOT_HANDLERS_HOOK" : 'letraz_server.handlers.grpc_handlers',
+}
+
+# GRPC Client Channels
 startup_logger.info('Connecting to gRPC:util...')
 UTIL_GRPC_CHANNEL, UTIL_GRPC_CHANNEL_STATUS, UTIL_GRPC_ERROR = GRPCClient(target=os.environ.get('UTIL_GRPC_HOST', '')).connect().get()
 if UTIL_GRPC_ERROR:

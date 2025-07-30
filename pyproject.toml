@@ -21,7 +21,7 @@ dependencies = [
     "grpcio>=1.73.1",
     "grpcio-tools>=1.73.1",
     "protobuf>=6.31.1",
-    "djangogrpcframework>=0.2.1",
+    "django-socio-grpc>=0.24.4",
 ]
 
 [dependency-groups]

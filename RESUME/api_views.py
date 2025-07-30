@@ -12,11 +12,9 @@ from google.protobuf.json_format import MessageToDict
 from CORE.models import Process
 from CORE.serializers import ErrorSerializer
 from JOB.models import Job
-from JOB.proto_serializers import JobFullProtoSerializer
 from JOB.serializers import JobFullSerializer, JobSerializer
 from PROFILE.models import User
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
-from RESUME.proto_serializers import ResumeFullProtoSerializer
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package letraz_server.CORE;
+
+import "google/protobuf/empty.proto";
+
+service CoreController {
+    rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse) {}
+}
+
+message HealthCheckResponse {
+    string instance_id = 1;
+    string status = 2;
+    HealthDetailsResponse details = 3;
+}
+
+message HealthDetailsResponse {
+    string sentry = 1;
+    string clerk = 2;
+    string db = 3;
+    string util_service = 4;
+}
+

@@ -1,10 +1,12 @@
-from random import choices
-
 from rest_framework import serializers
+from django_socio_grpc import proto_serializers
+
 from .models import Country, Waitlist, Skill
+from CORE.grpc import CORE_pb2
 
-
-class HealthDetailsSerializer(serializers.Serializer):
+class HealthDetailsSerializer(proto_serializers.ProtoSerializer):
+    class Meta:
+        proto_class = CORE_pb2.HealthDetailsResponse
     SENTRY_STATUS_CHOICES = [
         ('OPERATIONAL', 'OPERATIONAL'),
         ('UNINITIALIZED', 'UNINITIALIZED'),
@@ -19,6 +21,11 @@ class HealthDetailsSerializer(serializers.Serializer):
         ('DEGRADED', 'DEGRADED'),
         ('FATAL', 'FATAL')
     ]
+    UTIL_SERVICE_STATUS_CHOICES = [
+        ('OPERATIONAL', 'OPERATIONAL'),
+        ('DISCONNECTED', 'DISCONNECTED'),
+        ('FAILED', 'FAILED')
+    ]
     sentry = serializers.ChoiceField(
         SENTRY_STATUS_CHOICES,
         help_text='The status of the sentry integration. If False, the sentry is not initialized, possibly due to absense of environment variables, which is expected or misconfigured initialization.'
@@ -26,17 +33,22 @@ class HealthDetailsSerializer(serializers.Serializer):
     clerk = serializers.ChoiceField(
         CLERK_STATUS_CHOICES,
         help_text='The health status of Clerk integration. The status can be OPERATIONAL or DOWN.')
-    DB = serializers.ChoiceField(
+    db = serializers.ChoiceField(
         DB_STATUS_CHOICES,
         help_text='The health status of  Clerk connection. The status can be OPERATIONAL, DEGRADED or FATAL.')
+    util_service = serializers.ChoiceField(
+            UTIL_SERVICE_STATUS_CHOICES,
+            help_text='The health status of gRPC:util connection. The status can be OPERATIONAL, DISCONNECTED or FAILED.')
 
 
-class HealthCheckSerializer(serializers.Serializer):
+class HealthCheckSerializer(proto_serializers.ProtoSerializer):
+    class Meta:
+        proto_class = CORE_pb2.HealthCheckResponse
     STATUS_CHOICES = [
         ('OPERATIONAL', 'OPERATIONAL'),
         ('DEGRADED', 'DEGRADED')
     ]
-
+    instance_id = serializers.CharField(help_text='The id of the instance from which the health check response has been received.')
     status = serializers.ChoiceField(
         help_text='The health status of the server. The status can be ok, degraded or failing.', choices=STATUS_CHOICES)
     details = HealthDetailsSerializer()
