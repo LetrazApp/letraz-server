@@ -188,6 +188,22 @@ wheels = [
 ]
 
 [[package]]
+name = "django-socio-grpc"
+version = "0.24.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "djangorestframework" },
+    { name = "grpcio-health-checking" },
+    { name = "grpcio-tools" },
+    { name = "lark" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/11/36b1255f04bf4f5e44f7a223c1789b71ecb13fcc13eb84210df1273c3eba/django_socio_grpc-0.24.4.tar.gz", hash = "sha256:6afe25dcdd9aa85d808be97840eaf76565d8dfdbd8cd4abef8ad41f00ac7230b", size = 140176, upload-time = "2025-05-21T12:57:00.748Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/c0/44396a45a3d7152c94f1ef54924863415a9d0edd376c122f54d9d8e76870/django_socio_grpc-0.24.4-py3-none-any.whl", hash = "sha256:d91a24f668560f3f225ff2f77d8128a387f47d50d29451ebc38ee6eff4d57817", size = 214967, upload-time = "2025-05-21T12:56:59.059Z" },
+]
+
+[[package]]
 name = "django-stubs"
 version = "5.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -213,15 +229,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fc/06/5e94715d103e6cc72380cb0d0b6682a7d5ad2c366cee478c94d77aad777d/django_stubs_ext-5.2.2.tar.gz", hash = "sha256:d9d151b919fe2438760f5bd938f03e1cb08c84d0651f9e5917f1313907e42683", size = 6244, upload-time = "2025-07-17T08:34:35.054Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/38/2903676f97f7902ee31984a06756b0e8836e897f4b617e1a03be4a43eb4f/django_stubs_ext-5.2.2-py3-none-any.whl", hash = "sha256:8833bbe32405a2a0ce168d3f75a87168f61bd16939caf0e8bf173bccbd8a44c5", size = 8816, upload-time = "2025-07-17T08:34:33.715Z" },
-]
-
-[[package]]
-name = "djangogrpcframework"
-version = "0.2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/96/d9/74504f99dbfe1955a3f5e0ca2952cc4a7decee156822f18f0d0cf3c58328/djangogrpcframework-0.2.1.tar.gz", hash = "sha256:f96ae98d463f02745dbac5c18899801b738c79efd198e8cc709a7476533aec97", size = 14057, upload-time = "2021-07-23T09:24:54.616Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/89/9a475e234786ba14fd3b538a18df0d20e98ce5a51906e1bd4485a74164e1/djangogrpcframework-0.2.1-py2.py3-none-any.whl", hash = "sha256:c1835bd87ac9bdbdbdb631cd1c12720e711260d316303d19e4c63e53896ff0e6", size = 20963, upload-time = "2021-07-23T09:24:52.781Z" },
 ]
 
 [[package]]
@@ -291,6 +298,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/29/efbd4ac837c23bc48e34bbaf32bd429f0dc9ad7f80721cdb4622144c118c/grpcio-1.73.1-cp313-cp313-musllinux_1_1_x86_64.whl", hash = "sha256:686231cdd03a8a8055f798b2b54b19428cdf18fa1549bee92249b43607c42668", size = 6287288, upload-time = "2025-06-26T01:52:57.33Z" },
     { url = "https://files.pythonhosted.org/packages/d8/61/c6045d2ce16624bbe18b5d169c1a5ce4d6c3a47bc9d0e5c4fa6a50ed1239/grpcio-1.73.1-cp313-cp313-win32.whl", hash = "sha256:89018866a096e2ce21e05eabed1567479713ebe57b1db7cbb0f1e3b896793ba4", size = 3668151, upload-time = "2025-06-26T01:52:59.405Z" },
     { url = "https://files.pythonhosted.org/packages/c2/d7/77ac689216daee10de318db5aa1b88d159432dc76a130948a56b3aa671a2/grpcio-1.73.1-cp313-cp313-win_amd64.whl", hash = "sha256:4a68f8c9966b94dff693670a5cf2b54888a48a5011c5d9ce2295a1a1465ee84f", size = 4335747, upload-time = "2025-06-26T01:53:01.233Z" },
+]
+
+[[package]]
+name = "grpcio-health-checking"
+version = "1.73.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/d8/81b0e9b2e3cf82c61bd66e7e572878e7402d4ff3f793da18385dfcdb4113/grpcio_health_checking-1.73.1.tar.gz", hash = "sha256:352753713edeba3f23ea8a3320c5752bee186002d9475a654f5f815ff4e06345", size = 16763, upload-time = "2025-06-26T02:02:57.354Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/ae/1e858845b9120b757d64f96096a15ce5a2077e5304fdd8dac79c630f8953/grpcio_health_checking-1.73.1-py3-none-any.whl", hash = "sha256:d5fa49c3a2d67d7622690ddf6677a429264f35d1b2ef80bf58e3ffe88a1154c0", size = 18921, upload-time = "2025-06-26T02:02:36.97Z" },
 ]
 
 [[package]]
@@ -426,6 +446,15 @@ wheels = [
 ]
 
 [[package]]
+name = "lark"
+version = "1.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/af/60/bc7622aefb2aee1c0b4ba23c1446d3e30225c8770b38d7aedbfb65ca9d5a/lark-1.2.2.tar.gz", hash = "sha256:ca807d0162cd16cef15a8feecb862d7319e7a09bdb13aef927968e45040fed80", size = 252132, upload-time = "2024-08-13T19:49:00.652Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/00/d90b10b962b4277f5e64a78b6609968859ff86889f5b898c1a778c06ec00/lark-1.2.2-py3-none-any.whl", hash = "sha256:c2276486b02f0f1b90be155f2c8ba4a8e194d42775786db622faccd652d8e80c", size = 111036, upload-time = "2024-08-13T19:48:58.603Z" },
+]
+
+[[package]]
 name = "letraz-server"
 version = "0.1.0"
 source = { virtual = "." }
@@ -433,7 +462,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "django" },
     { name = "django-cors-headers" },
-    { name = "djangogrpcframework" },
+    { name = "django-socio-grpc" },
     { name = "djangorestframework" },
     { name = "djangorestframework-jwt" },
     { name = "drf-spectacular" },
@@ -459,7 +488,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=36.0.1" },
     { name = "django", specifier = ">=5.2.4" },
     { name = "django-cors-headers", specifier = ">=4.6.0" },
-    { name = "djangogrpcframework", specifier = ">=0.2.1" },
+    { name = "django-socio-grpc", specifier = ">=0.24.4" },
     { name = "djangorestframework", specifier = ">=3.15.2" },
     { name = "djangorestframework-jwt", specifier = ">=1.11.0" },
     { name = "drf-spectacular", specifier = ">=0.28.0" },
