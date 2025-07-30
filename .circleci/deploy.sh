@@ -174,6 +174,7 @@ deploy() {
         --name "$CONTAINER_NAME" \
         --env-file .env.docker \
         -p 8000:8000 \
+        -p 50051:50051 \
         --restart unless-stopped \
         --memory=2g \
         --log-driver json-file \
