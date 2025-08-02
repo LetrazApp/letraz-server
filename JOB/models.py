@@ -14,13 +14,13 @@ def generate_job_id():
 
 
 class Job(models.Model):
-    id = models.CharField(
-        max_length=25,
-        primary_key=True,
-        default=generate_job_id,
-        editable=False,
-        help_text='The unique identifier for the job entry.'
-    )
+    class Status(models.TextChoices):
+        Processing = 'P'
+        Success = 'S'
+        Failure = 'F'
+        Manual = 'M'
+        Other = 'O'
+    id = models.CharField(max_length=25, primary_key=True, default=generate_job_id, editable=False, help_text='The unique identifier for the job entry.')
     job_url = models.CharField(max_length=1000, blank=True, null=True, help_text='The URL of the job posting. (optional)')
     title = models.CharField(max_length=250, help_text='The title of the job as mentioned in the job posting. If not available, a meaningful title would be auto-generated.')
     company_name = models.CharField(max_length=250, help_text='The name of the company that posted the job.')
@@ -33,5 +33,5 @@ class Job(models.Model):
     responsibilities = models.JSONField(blank=True, null=True, help_text='An array representation of the responsibilities the candidate would be undertaking as mentioned in the job posting. (optional)')
     benefits = models.JSONField(blank=True, null=True, help_text='An array representation of the benefits the candidate would get as mentioned in the job posting. (optional)')
 
-    processing = models.BooleanField(default=False)
+    status = models.CharField(max_length=1, choices=Status.choices, null=True, blank=True, help_text='The status of the job as mentioned in the job posting. (optional)')
     process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True)

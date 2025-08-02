@@ -8,7 +8,7 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 @admin.register(Resume)
 class ResumeAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'job', 'base')
-    list_filter = ('base',)
+    list_filter = ('base', 'status')
 
 
 # Register your models here.

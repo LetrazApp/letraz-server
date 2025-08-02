@@ -18,13 +18,13 @@ def generate_resume_id():
 
 
 class Resume(models.Model):
-    id = models.CharField(
-        max_length=25,
-        primary_key=True,
-        default=generate_resume_id,
-        editable=False,
-        help_text='The unique identifier for the resume entry.'
-    )
+    class Status(models.TextChoices):
+        Processing = 'P'
+        Success = 'S'
+        Failure = 'F'
+        Manual = 'M'
+        Other = 'O'
+    id = models.CharField(max_length=25, primary_key=True, default=generate_resume_id, editable=False, help_text='The unique identifier for the resume entry.')
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the resume belongs to.')
     job = models.ForeignKey(Job, on_delete=models.SET_NULL, blank=True, null=True,
                             help_text='The job the resume is for. (optional in case it\'s a base resume for the user.)')
@@ -33,7 +33,7 @@ class Resume(models.Model):
     variations = models.ManyToManyField('Resume', related_name='related_resumes', blank=True)
     version = models.IntegerField(default=1, help_text='The version of the resume.')
 
-    processing = models.BooleanField(default=False)
+    status = models.CharField(max_length=1, choices=Status.choices, null=True, blank=True, help_text='The status of the job as mentioned in the job posting. (optional)')
     process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True)
 
     class Meta:

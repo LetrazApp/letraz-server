@@ -7,16 +7,20 @@ from RESUME.models import Resume, ResumeSection, Education, Experience, Proficie
 
 class ResumeShortSerializer(serializers.ModelSerializer):
     job = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'processing')
+        fields = ('id', 'base', 'user', 'job', 'status')
         read_only_fields = ['id']
 
     @staticmethod
-    def get_job(obj: Resume):
-        return JobShortSerializer(obj.job).data
+    def get_job(resume: Resume):
+        return JobShortSerializer(resume.job).data
 
+    @staticmethod
+    def get_status(resume: Resume):
+        return resume.get_status_display()
 
 class BaseResumeFullSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
@@ -38,16 +42,20 @@ class BaseResumeFullSerializer(serializers.ModelSerializer):
 
 class ResumeFullSerializer(BaseResumeFullSerializer):
     job = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'processing', 'sections')
+        fields = ('id', 'base', 'user', 'job', 'status', 'sections')
         read_only_fields = ['id']
 
     @staticmethod
     def get_job(resume: Resume):
         return JobFullSerializer(resume.job).data
 
+    @staticmethod
+    def get_status(resume: Resume):
+        return resume.get_status_display()
 
 class ResumeSectionFullSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
