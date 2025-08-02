@@ -30,12 +30,12 @@ class ScrapeJobCallbackService(generics.GenericService):
         process = await process_qs.afirst()
         in_progress_job_qs = Job.objects.filter(process=process)
         if not await in_progress_job_qs.aexists():
-            process.status = Process.ProcessStatus.Failed
+            process.status = Process.ProcessStatus.Failed.value
             process.status_details=f"No job found for the process: {process.id}"
             await process.asave()
             raise NotFound(f"No job found for the process: {process.id}")
         if not request.data or not request.data.job:
-            process.status = Process.ProcessStatus.Failed
+            process.status = Process.ProcessStatus.Failed.value
             process.status_details = f"Must return a job object"
             await process.asave()
             raise InvalidArgument(f"Must return a job object")
@@ -58,14 +58,14 @@ class ScrapeJobCallbackService(generics.GenericService):
             in_progress_job.processing = False
 
             await in_progress_job.asave()
-            process.status = Process.ProcessStatus.Success
+            process.status = Process.ProcessStatus.Success.value
             process.status_details = f"Successfully updated the job: {in_progress_job.id}"
             await process.asave()
             batch = threading.Thread(target=bulk_call_tailor_resume_for_the_job, args=(in_progress_job, f'ScrapeJobCallBack :: util Process id: {util_process_id}'))
             batch.start()
             # bulk_call_tailor_resume_for_the_job(job=in_progress_job, source=f'ScrapeJobCallBack :: util Process id: {util_process_id}')
         except Exception as e:
-            process.status = Process.ProcessStatus.Failed
+            process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
             logger.exception(error_msg)
             process.status_details=error_msg[:249]
