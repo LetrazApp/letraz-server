@@ -1252,7 +1252,7 @@ def tailor_resume(request):
                     return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
             else:
                 new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
-                new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, processing=True)
+                new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing.value)
                 # GRPC: Call Scrape-Job RPC method with URL to Util service
                 process = Process.objects.create(desc='Scrape Job Process')
                 try:

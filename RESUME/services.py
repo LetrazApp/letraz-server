@@ -1,0 +1,133 @@
+import logging
+from PROFILE.models import User
+from django_socio_grpc import generics
+from django_socio_grpc.exceptions import NotFound, InvalidArgument, GRPCException
+from unicodedata import category
+
+from CORE.models import Process, Country, Skill
+from RESUME.models import Resume, ResumeSection, Experience, Education, Project, Certification
+from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
+from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer
+from RESUME.utils import bulk_call_tailor_resume_for_the_job
+from letraz_server.settings import PROJECT_NAME
+from django_socio_grpc.decorators import grpc_action
+from google.protobuf.json_format import MessageToDict
+__module_name = f'{PROJECT_NAME}.' + __name__
+logger = logging.getLogger(__module_name)
+
+
+class TailorResumeCallBackService(generics.GenericService):
+
+    @grpc_action(
+        request=TailorResumeCallBackRequestProtoSerializer,
+        response=TailorResumeCallBackResponseSerializer,  # Empty response
+    )
+    async def TailorResumeCallBack(self, request, context):
+        util_process_id = str(request.processId)
+        logger.debug(f"[util id - {util_process_id}] [method: TailorResumeJobCallBack] --->Reqquest: {request}")
+
+        # Your implementation here
+        process_qs = Process.objects.filter(util_id=request.processId)
+        if not await process_qs.aexists():
+            raise NotFound(f"No process found with that util process id: {request.processId}")
+        process = await process_qs.afirst()
+        in_progress_resume_qs = Resume.objects.filter(process=process)
+        if not await in_progress_resume_qs.aexists():
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"No resume found for the process: {process.id}"
+            await process.asave()
+            raise NotFound(f"No resume found for the process: {process.id}")
+        if not request.data or not request.data.tailored_resume or not request.data.tailored_resume.sections:
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"Must return a resume object with sections"
+            await process.asave()
+            raise InvalidArgument(f"Must return a resume object with sections")
+        try:
+            in_progress_resume: Resume = await in_progress_resume_qs.afirst()
+            user = await User.objects.aget(id=in_progress_resume.user_id)
+            resume_sections_data = MessageToDict(request.data.tailored_resume).get("sections")
+            logger.debug(f"[util id - {util_process_id}] [method: TailorResumeJobCallBack] Resume sections data: {resume_sections_data}")
+            for position, section in enumerate(resume_sections_data):
+                if section.get('data'):
+                    section_data = section.get('data')
+                    if section.get('type') == 'Skill':
+                        if section.get('skills'):
+                            for skill in section.get('skills'):
+                                in_progress_resume.add_skill(skill_name=skill.get('skill').get('name'), skill_category=skill.get('skill').get('category'), skill_proficiency=skill.get('level'))
+                    elif section.get('type') == 'Experience':
+                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Experience.value)
+                        experience = await Experience.objects.acreate(
+                            resume_section=new_res_sec, user=user, company_name=section_data.get('company_name'),
+                            job_title=section_data.get('jobTitle'), employment_type=Experience.EmploymentType.get_value_by_display(section_data.get('employmentType'))
+                        )
+                        experience.city = section_data.get('city')
+                        if section_data.get('country'):
+                            country, created = await Country.objects.aget_or_create(code=section_data.get('country').get('code'), name=section_data.get('country').get('name'))
+                            experience.country = country
+                        experience.started_from_month = section_data.get('startedFromMonth')
+                        experience.started_from_year = section_data.get('startedFromYear')
+                        experience.finished_at_month = section_data.get('finishedAtMonth')
+                        experience.finished_at_year = section_data.get('finishedAtYear')
+                        experience.current = section_data.get('current')
+                        experience.description = section_data.get('description')
+                        await experience.asave()
+                    elif section.get('type') == 'Education':
+                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Education.value)
+                        education = await Education.objects.acreate(
+                            resume_section=new_res_sec, user=user, institution_name=section_data.get('institutionName'),
+                            field_of_study=section_data.get('fieldOfStudy')
+                        )
+                        education.degree = section_data.get('degree')
+                        if section_data.get('country'):
+                            country, created = await Country.objects.aget_or_create(code=section_data.get('country').get('code'), name=section_data.get('country').get('name'))
+                            education.country = country
+                        education.started_from_month = section_data.get('startedFromMonth')
+                        education.started_from_year = section_data.get('startedFromYear')
+                        education.finished_at_month = section_data.get('finishedAtMonth')
+                        education.finished_at_year = section_data.get('finishedAtYear')
+                        education.current = section_data.get('current')
+                        education.description = section_data.get('description')
+                        await education.asave()
+                    elif section.get('type') == 'Project':
+                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Project.value)
+                        project = await Project.objects.acreate(
+                            resume_section=new_res_sec, user=user,
+                            name=section_data.get('name')
+                        )
+                        project.category = section_data.get('category')
+                        project.description = section_data.get('description')
+                        project.role = section_data.get('role')
+                        project.github_url = section_data.get('github_url')
+                        project.live_url = section_data.get('live_url')
+                        if section_data.get('skills_used'):
+                            skills = section_data.get('skills_used')
+                            for skill in skills:
+                                project.add_skill(skill_name=skill.get('name'), skill_category=skill.get('category'))
+                        project.started_from_month = section_data.get('startedFromMonth')
+                        project.started_from_year = section_data.get('startedFromYear')
+                        project.finished_at_month = section_data.get('finishedAtMonth')
+                        project.finished_at_year = section_data.get('finishedAtYear')
+                        project.current = section_data.get('current')
+                        await project.asave()
+                    elif section.get('type') == 'Certification':
+                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Project.value)
+                        certification = await Certification.objects.acreate(
+                            resume_section=new_res_sec, user=user,
+                            name=section_data.get('name')
+                        )
+                        certification.issuing_organization = section_data.get('issuingOrganization')
+                        certification.issue_date = section_data.get('issueDate')
+                        certification.credential_url = section_data.get('credentialUrl')
+                        await certification.asave()
+                    else:
+                        pass
+            in_progress_resume.status = Resume.Status.Success.value
+            await in_progress_resume.asave()
+        except Exception as e:
+            process.status = Process.ProcessStatus.Failed.value
+            error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
+            logger.exception(error_msg)
+            process.status_details = error_msg[:249]
+            await process.asave()
+            raise GRPCException(str(e))
+        return ScrapeJobResponseSerializer("OK").message

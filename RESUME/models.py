@@ -188,6 +188,14 @@ class Experience(models.Model):
         VOLUNTEER = 'vol'
         TRAINEE = 'tra'
 
+        @staticmethod
+        def get_value_by_display(display):
+            for choice in Experience.EmploymentType.choices:
+                value, label = choice
+                if label == display:
+                    return value
+            return None
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
                           help_text='The unique identifier for the experience entry.')
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the experience entry belongs to.')
