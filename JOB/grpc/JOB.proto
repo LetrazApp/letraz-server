@@ -25,8 +25,8 @@ message JobDetailRequest {
 
 message JobSalaryRequest {
     optional string currency = 1;
-    optional float max = 2;
-    optional float min = 3;
+    optional int32 max = 2;
+    optional int32 min = 3;
 }
 
 message ScrapeJobCallbackRequest {

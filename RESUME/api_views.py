@@ -19,6 +19,7 @@ from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, Educ
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
     CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer
+from RESUME.utils import call_tailor_resume_util_service
 from letraz_server import settings
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
@@ -1224,7 +1225,7 @@ def tailor_resume(request):
                 if job_resume_qs.exists():
                     return Response(ResumeFullSerializer(job_resume_qs.first(), many=False).data)
                 else:
-                    new_resume_for_job = Resume.objects.create(job=job, user=request.user, status=Resume.Status.Processing)
+                    new_resume_for_job = Resume.objects.create(job=job, user=request.user, status=Resume.Status.Processing.value)
                     # GRPC: Call Tailor-Resume RPC method to Util service
                     base_resume = request.user.resume_set.get(base=True)
                     process = Process.objects.create(desc='Tailor Resume Process')
@@ -1242,7 +1243,7 @@ def tailor_resume(request):
                     except Exception as e:
                         error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                         logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
-                        process.status = Process.ProcessType.Failed.value
+                        process.status = Process.ProcessStatus.Failed.value
                         process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                         process.save()
                         if new_resume_for_job:
@@ -1250,7 +1251,7 @@ def tailor_resume(request):
                         return error_response.response
                     return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
             else:
-                new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing)
+                new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
                 new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, processing=True)
                 # GRPC: Call Scrape-Job RPC method with URL to Util service
                 process = Process.objects.create(desc='Scrape Job Process')
@@ -1268,7 +1269,7 @@ def tailor_resume(request):
                 except Exception as e:
                     error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                     logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
-                    process.status = Process.ProcessType.Failed.value
+                    process.status = Process.ProcessStatus.Failed.value
                     process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                     process.save()
                     if new_job_obj:
@@ -1278,8 +1279,8 @@ def tailor_resume(request):
                     return error_response.response
                 return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
         elif len(str(target.strip())) > 300:
-            new_job_obj = Job.objects.create(title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing)
-            new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing)
+            new_job_obj = Job.objects.create(title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
+            new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing.value)
             # GRPC: Call Scrape-Job RPC method with Description to Util service
             process = Process.objects.create(desc='Scrape Job Process')
             try:
@@ -1296,7 +1297,7 @@ def tailor_resume(request):
             except Exception as e:
                 error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                 logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
-                process.status = Process.ProcessType.Failed.value
+                process.status = Process.ProcessStatus.Failed.value
                 process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                 process.save()
                 if new_job_obj:

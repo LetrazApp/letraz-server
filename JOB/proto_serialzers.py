@@ -4,8 +4,8 @@ from .grpc import JOB_pb2
 
 class JobSalarySerializer(ProtoSerializer):
     currency = serializers.CharField(required=False)
-    max = serializers.FloatField(required=False)
-    min = serializers.FloatField(required=False)
+    max = serializers.IntegerField(required=False)
+    min = serializers.IntegerField(required=False)
 
 
 class JobDetailSerializer(ProtoSerializer):
