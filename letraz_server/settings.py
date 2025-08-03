@@ -47,6 +47,21 @@ except Exception as ex:
 
 ALLOWED_HOSTS += list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(';')))
 
+# Algolia Configuration (moved here before INSTALLED_APPS)
+ALGOLIA_STATUS = 'UNINITIALIZED'
+ALGOLIA_APPLICATION_ID = os.environ.get('ALGOLIA_APPLICATION_ID', '')
+ALGOLIA_API_KEY = os.environ.get('ALGOLIA_API_KEY', '')
+
+if ALGOLIA_APPLICATION_ID and ALGOLIA_API_KEY:
+    ALGOLIA = {
+        'APPLICATION_ID': ALGOLIA_APPLICATION_ID,
+        'API_KEY': ALGOLIA_API_KEY
+    }
+    ALGOLIA_STATUS = 'OPERATIONAL'
+else:
+    ALGOLIA_STATUS = 'DISABLED'
+    startup_logger.warning('Algolia credentials not provided! Algolia indexing will be disabled.')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -64,8 +79,6 @@ INSTALLED_APPS = [
     "corsheaders",
     # GRPC
     'django_socio_grpc',
-    # Algolia
-    'algoliasearch_django',
 
     # Apps
     'CORE.apps.CoreConfig',
@@ -73,6 +86,10 @@ INSTALLED_APPS = [
     'RESUME.apps.ResumeConfig',
     'PROFILE.apps.ProfileConfig'
 ]
+
+# Conditionally add Algolia if credentials are available
+if ALGOLIA_STATUS == 'OPERATIONAL':
+    INSTALLED_APPS.append('algoliasearch_django')
 
 AUTH_USER_MODEL = 'PROFILE.User'
 
@@ -91,11 +108,7 @@ if not KNOCK_API_KEY:
     KNOCK_STATUS = 'DOWN'
     startup_logger.error('Knock API_KEY is not provided!')
 
-# Algolia Configuration
-ALGOLIA = {
-  'APPLICATION_ID': os.environ.get('ALGOLIA_APPLICATION_ID', ''),
-  'API_KEY':  os.environ.get('ALGOLIA_API_KEY', '')
-}
+# Note: Algolia configuration moved above INSTALLED_APPS
 
 # Admin API Configuration
 ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')

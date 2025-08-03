@@ -1,12 +1,25 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-import algoliasearch_django as algoliasearch
+from django.conf import settings
 from RESUME.models import Resume, Education, Experience, Proficiency, Project, Certification
+
+# Only import algoliasearch if it's available
+if getattr(settings, 'ALGOLIA_STATUS', 'DISABLED') == 'OPERATIONAL':
+    try:
+        import algoliasearch_django as algoliasearch
+        ALGOLIA_AVAILABLE = True
+    except ImportError:
+        ALGOLIA_AVAILABLE = False
+else:
+    ALGOLIA_AVAILABLE = False
 
 
 @receiver([post_save, post_delete], sender=Resume)
 def update_resume_index_on_resume_change(sender, instance, **kwargs):
     """Handle Resume changes - update or delete from Algolia based on base status and processing status"""
+    if not ALGOLIA_AVAILABLE:
+        return
+        
     try:
         if instance.base or instance.status != Resume.Status.Success:
             # Remove from Algolia if this is a base resume OR not successfully processed
@@ -23,8 +36,8 @@ def update_resume_index_on_education_change(sender, instance, **kwargs):
     """Update Resume in Algolia when Education is modified (only for non-base resumes)"""
     try:
         resume = instance.resume_section.resume
-        # Only update if this is not a base resume AND status is Success
-        if not resume.base and resume.status == Resume.Status.Success:
+        # Only update if this is not a base resume AND status is Success AND Algolia is available
+        if ALGOLIA_AVAILABLE and not resume.base and resume.status == Resume.Status.Success:
             if kwargs.get('created', False) or kwargs.get('signal').__name__ == 'post_save':
                 algoliasearch.save_record(resume)
             elif kwargs.get('signal').__name__ == 'post_delete':
@@ -39,8 +52,8 @@ def update_resume_index_on_experience_change(sender, instance, **kwargs):
     """Update Resume in Algolia when Experience is modified (only for non-base resumes)"""
     try:
         resume = instance.resume_section.resume
-        # Only update if this is not a base resume AND status is Success
-        if not resume.base and resume.status == Resume.Status.Success:
+        # Only update if this is not a base resume AND status is Success AND Algolia is available
+        if ALGOLIA_AVAILABLE and not resume.base and resume.status == Resume.Status.Success:
             if kwargs.get('created', False) or kwargs.get('signal').__name__ == 'post_save':
                 algoliasearch.save_record(resume)
             elif kwargs.get('signal').__name__ == 'post_delete':
@@ -54,8 +67,8 @@ def update_resume_index_on_proficiency_change(sender, instance, **kwargs):
     """Update Resume in Algolia when Proficiency (Skills) is modified (only for non-base resumes)"""
     try:
         resume = instance.resume_section.resume
-        # Only update if this is not a base resume AND status is Success
-        if not resume.base and resume.status == Resume.Status.Success:
+        # Only update if this is not a base resume AND status is Success AND Algolia is available
+        if ALGOLIA_AVAILABLE and not resume.base and resume.status == Resume.Status.Success:
             if kwargs.get('created', False) or kwargs.get('signal').__name__ == 'post_save':
                 algoliasearch.save_record(resume)
             elif kwargs.get('signal').__name__ == 'post_delete':
@@ -69,8 +82,8 @@ def update_resume_index_on_project_change(sender, instance, **kwargs):
     """Update Resume in Algolia when Project is modified (only for non-base resumes)"""
     try:
         resume = instance.resume_section.resume
-        # Only update if this is not a base resume AND status is Success
-        if not resume.base and resume.status == Resume.Status.Success:
+        # Only update if this is not a base resume AND status is Success AND Algolia is available
+        if ALGOLIA_AVAILABLE and not resume.base and resume.status == Resume.Status.Success:
             if kwargs.get('created', False) or kwargs.get('signal').__name__ == 'post_save':
                 algoliasearch.save_record(resume)
             elif kwargs.get('signal').__name__ == 'post_delete':
@@ -84,8 +97,8 @@ def update_resume_index_on_certification_change(sender, instance, **kwargs):
     """Update Resume in Algolia when Certification is modified (only for non-base resumes)"""
     try:
         resume = instance.resume_section.resume
-        # Only update if this is not a base resume AND status is Success
-        if not resume.base and resume.status == Resume.Status.Success:
+        # Only update if this is not a base resume AND status is Success AND Algolia is available
+        if ALGOLIA_AVAILABLE and not resume.base and resume.status == Resume.Status.Success:
             if kwargs.get('created', False) or kwargs.get('signal').__name__ == 'post_save':
                 algoliasearch.save_record(resume)
             elif kwargs.get('signal').__name__ == 'post_delete':

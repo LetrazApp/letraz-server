@@ -1,7 +1,17 @@
 from django.core.management.base import BaseCommand
-from algoliasearch_django import raw_search
+from django.conf import settings
 from RESUME.models import Resume
-import algoliasearch_django as algoliasearch
+
+# Only import algoliasearch if it's available
+if getattr(settings, 'ALGOLIA_STATUS', 'DISABLED') == 'OPERATIONAL':
+    try:
+        import algoliasearch_django as algoliasearch
+        from algoliasearch_django import raw_search
+        ALGOLIA_AVAILABLE = True
+    except ImportError:
+        ALGOLIA_AVAILABLE = False
+else:
+    ALGOLIA_AVAILABLE = False
 
 
 class Command(BaseCommand):
@@ -26,6 +36,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if not ALGOLIA_AVAILABLE:
+            self.stdout.write(
+                self.style.ERROR('Algolia is not available. Check your ALGOLIA_APPLICATION_ID and ALGOLIA_API_KEY environment variables.')
+            )
+            return
+            
         batch_size = options['batch_size']
         dry_run = options['dry_run']
         clear_index = options['clear_index']
