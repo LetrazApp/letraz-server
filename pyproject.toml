@@ -22,6 +22,8 @@ dependencies = [
     "grpcio-tools>=1.73.1",
     "protobuf>=6.31.1",
     "django-socio-grpc>=0.24.4",
+    "algoliasearch-django>=4.0.0",
+    "algoliasearch>=4.24.0",
 ]
 
 [dependency-groups]

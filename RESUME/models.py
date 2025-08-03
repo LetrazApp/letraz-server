@@ -280,6 +280,7 @@ class Project(models.Model):
         self.resume_section.resume.add_skill(skill_name, skill_category)
         return skill
 
+
 class Certification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
                           help_text="Unique identifier for the certification")

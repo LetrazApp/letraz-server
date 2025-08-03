@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     "corsheaders",
     # GRPC
     'django_socio_grpc',
+    # Algolia
+    'algoliasearch_django',
 
     # Apps
     'CORE.apps.CoreConfig',
@@ -88,6 +90,12 @@ KNOCK_API_KEY = os.environ.get('KNOCK_API_KEY', '')
 if not KNOCK_API_KEY:
     KNOCK_STATUS = 'DOWN'
     startup_logger.error('Knock API_KEY is not provided!')
+
+# Algolia Configuration
+ALGOLIA = {
+  'APPLICATION_ID': os.environ.get('ALGOLIA_APPLICATION_ID', ''),
+  'API_KEY':  os.environ.get('ALGOLIA_API_KEY', '')
+}
 
 # Admin API Configuration
 ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
