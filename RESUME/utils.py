@@ -29,9 +29,9 @@ def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None)
                                                    job=JobSerializer(job, many=False).data,
                                                    resume_id=target_resume.id)
         res = MessageToDict(resume_service.TailorResume(req))
-        logger.debug(f'Tailor Resume Process: \n{res}')
+        logger.debug(f'[source={source}] :: call_tailor_resume_util_service : Response: \n{res}')
         process.status = res.get('status')
-        process.util_id = res.get('util_id')
+        process.util_id = res.get('processId')
         process.status_details = res.get('message')
         process.save()
         target_resume.process = process
@@ -49,4 +49,4 @@ def bulk_call_tailor_resume_for_the_job(job:Job, source=None):
     in_progress_resumes_for_job = job.resume_set.all()
     for in_progress_resume in in_progress_resumes_for_job:
         logger.info(f'[Source={source}]Tailor Resume Process called for resume: {in_progress_resume.id}')
-        call_tailor_resume_util_service(job=job, target_resume=in_progress_resume)
+        call_tailor_resume_util_service(job=job, target_resume=in_progress_resume, source=source)
