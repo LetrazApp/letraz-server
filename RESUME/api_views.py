@@ -1298,7 +1298,7 @@ def tailor_resume(request):
                 error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                 logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                 process.status = Process.ProcessStatus.Failed.value
-                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
+                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'[:249]
                 process.save()
                 if new_job_obj:
                     new_job_obj.delete()

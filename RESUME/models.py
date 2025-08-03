@@ -280,11 +280,16 @@ class Project(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-    def add_skill(self, skill_name, skill_category=None):
+
+    def add_skill_only_to_project(self, skill_name, skill_category=None):
         skill: Skill
         skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
         self.skills_used.add(skill)
         self.save()
+        return skill
+
+    def add_skill(self, skill_name, skill_category=None):
+        skill: Skill = self.add_skill_only_to_project(skill_name, skill_category)
         self.resume_section.resume.add_skill(skill_name, skill_category)
         return skill
 

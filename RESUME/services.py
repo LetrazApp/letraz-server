@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from PROFILE.models import User
 from django_socio_grpc import generics
@@ -5,13 +6,13 @@ from django_socio_grpc.exceptions import NotFound, InvalidArgument, GRPCExceptio
 from unicodedata import category
 
 from CORE.models import Process, Country, Skill
-from RESUME.models import Resume, ResumeSection, Experience, Education, Project, Certification
+from RESUME.models import Resume, ResumeSection, Experience, Education, Project, Certification, Proficiency
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer
 from RESUME.utils import bulk_call_tailor_resume_for_the_job
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
-from google.protobuf.json_format import MessageToDict
+from google.protobuf.json_format import MessageToDict, MessageToJson
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
@@ -24,7 +25,7 @@ class TailorResumeCallBackService(generics.GenericService):
     )
     async def TailorResumeCallBack(self, request, context):
         util_process_id = str(request.processId)
-        logger.debug(f"[util id - {util_process_id}] [method: TailorResumeJobCallBack] --->Reqquest: {request}")
+        logger.debug(f"[util id - {util_process_id}] [method: TailorResumeJobCallBack] --->Request: \n{MessageToJson(request)}")
 
         # Your implementation here
         process_qs = Process.objects.filter(util_id=request.processId)
@@ -44,6 +45,8 @@ class TailorResumeCallBackService(generics.GenericService):
             raise InvalidArgument(f"Must return a resume object with sections")
         try:
             in_progress_resume: Resume = await in_progress_resume_qs.afirst()
+            # Deleting all existing Resume section
+            await in_progress_resume.resumesection_set.all().adelete()
             user = await User.objects.aget(id=in_progress_resume.user_id)
             resume_sections_data = MessageToDict(request.data.tailored_resume).get("sections")
             logger.debug(f"[util id - {util_process_id}] [method: TailorResumeJobCallBack] Resume sections data: {resume_sections_data}")
@@ -51,40 +54,47 @@ class TailorResumeCallBackService(generics.GenericService):
                 if section.get('data'):
                     section_data = section.get('data')
                     if section.get('type') == 'Skill':
-                        if section.get('skills'):
-                            for skill in section.get('skills'):
-                                in_progress_resume.add_skill(skill_name=skill.get('skill').get('name'), skill_category=skill.get('skill').get('category'), skill_proficiency=skill.get('level'))
+                        if section_data.get('skills'):
+                            new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Skill.value)
+                            for skill in section_data.get('skills'):
+                                target_skill, created = await Skill.objects.aget_or_create(name=skill.get('skill').get('name'), category=skill.get('skill').get('category'))
+                                target_proficiency, created = await new_res_sec.proficiency_set.aget_or_create(skill=target_skill)
+                                skill_proficiency = skill.get('level')
+                                if skill_proficiency:
+                                    if str(skill_proficiency) in Proficiency.Level.values:
+                                        target_proficiency.level = skill_proficiency
+                                await target_proficiency.asave()
                     elif section.get('type') == 'Experience':
                         new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Experience.value)
                         experience = await Experience.objects.acreate(
                             resume_section=new_res_sec, user=user, company_name=section_data.get('company_name'),
-                            job_title=section_data.get('jobTitle'), employment_type=Experience.EmploymentType.get_value_by_display(section_data.get('employmentType'))
+                            job_title=section_data.get('job_title'), employment_type=Experience.EmploymentType.get_value_by_display(section_data.get('employment_type'))
                         )
                         experience.city = section_data.get('city')
                         if section_data.get('country'):
                             country, created = await Country.objects.aget_or_create(code=section_data.get('country').get('code'), name=section_data.get('country').get('name'))
                             experience.country = country
-                        experience.started_from_month = section_data.get('startedFromMonth')
-                        experience.started_from_year = section_data.get('startedFromYear')
-                        experience.finished_at_month = section_data.get('finishedAtMonth')
-                        experience.finished_at_year = section_data.get('finishedAtYear')
+                        experience.started_from_month = section_data.get('started_from_month')
+                        experience.started_from_year = section_data.get('started_from_year')
+                        experience.finished_at_month = section_data.get('finished_at_month')
+                        experience.finished_at_year = section_data.get('finished_at_year')
                         experience.current = section_data.get('current')
                         experience.description = section_data.get('description')
                         await experience.asave()
                     elif section.get('type') == 'Education':
                         new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Education.value)
                         education = await Education.objects.acreate(
-                            resume_section=new_res_sec, user=user, institution_name=section_data.get('institutionName'),
-                            field_of_study=section_data.get('fieldOfStudy')
+                            resume_section=new_res_sec, user=user, institution_name=section_data.get('institution_name'),
+                            field_of_study=section_data.get('field_of_study')
                         )
                         education.degree = section_data.get('degree')
                         if section_data.get('country'):
                             country, created = await Country.objects.aget_or_create(code=section_data.get('country').get('code'), name=section_data.get('country').get('name'))
                             education.country = country
-                        education.started_from_month = section_data.get('startedFromMonth')
-                        education.started_from_year = section_data.get('startedFromYear')
-                        education.finished_at_month = section_data.get('finishedAtMonth')
-                        education.finished_at_year = section_data.get('finishedAtYear')
+                        education.started_from_month = section_data.get('started_from_month')
+                        education.started_from_year = section_data.get('started_from_year')
+                        education.finished_at_month = section_data.get('finished_at_month')
+                        education.finished_at_year = section_data.get('finished_at_year')
                         education.current = section_data.get('current')
                         education.description = section_data.get('description')
                         await education.asave()
@@ -102,22 +112,22 @@ class TailorResumeCallBackService(generics.GenericService):
                         if section_data.get('skills_used'):
                             skills = section_data.get('skills_used')
                             for skill in skills:
-                                project.add_skill(skill_name=skill.get('name'), skill_category=skill.get('category'))
-                        project.started_from_month = section_data.get('startedFromMonth')
-                        project.started_from_year = section_data.get('startedFromYear')
-                        project.finished_at_month = section_data.get('finishedAtMonth')
-                        project.finished_at_year = section_data.get('finishedAtYear')
+                                await asyncio.to_thread(project.add_skill_only_to_project, skill_name=skill.get('name'), skill_category=skill.get('category'))
+                        project.started_from_month = section_data.get('started_from_month')
+                        project.started_from_year = section_data.get('started_from_year')
+                        project.finished_at_month = section_data.get('finished_at_month')
+                        project.finished_at_year = section_data.get('finished_at_year')
                         project.current = section_data.get('current')
                         await project.asave()
                     elif section.get('type') == 'Certification':
-                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Project.value)
+                        new_res_sec: ResumeSection = await in_progress_resume.resumesection_set.acreate(index=position, type=ResumeSection.ResumeSectionType.Certification.value)
                         certification = await Certification.objects.acreate(
                             resume_section=new_res_sec, user=user,
                             name=section_data.get('name')
                         )
-                        certification.issuing_organization = section_data.get('issuingOrganization')
-                        certification.issue_date = section_data.get('issueDate')
-                        certification.credential_url = section_data.get('credentialUrl')
+                        certification.issuing_organization = section_data.get('issuing_organization')
+                        certification.issue_date = section_data.get('issue_date')
+                        certification.credential_url = section_data.get('credential_url')
                         await certification.asave()
                     else:
                         pass
