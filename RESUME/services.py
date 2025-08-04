@@ -9,7 +9,7 @@ from CORE.models import Process, Country, Skill
 from RESUME.models import Resume, ResumeSection, Experience, Education, Project, Certification, Proficiency
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer
-from RESUME.utils import bulk_call_tailor_resume_for_the_job
+from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
@@ -134,6 +134,16 @@ class TailorResumeCallBackService(generics.GenericService):
                         pass
             in_progress_resume.status = Resume.Status.Success.value
             await in_progress_resume.asave()
+            
+            # Trigger thumbnail generation after successful resume tailoring
+            try:
+                # Use asyncio.to_thread to run sync function in async context
+                await asyncio.to_thread(generate_resume_thumbnail, in_progress_resume)
+                logger.info(f"[util id - {util_process_id}] Thumbnail generation triggered for tailored resume {in_progress_resume.id}")
+            except Exception as thumb_e:
+                # Don't fail the main process if thumbnail generation fails
+                logger.warning(f"[util id - {util_process_id}] Thumbnail generation failed for resume {in_progress_resume.id}: {thumb_e}")
+                
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
