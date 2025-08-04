@@ -17,6 +17,7 @@ __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
 
+
 class TailorResumeCallBackService(generics.GenericService):
 
     @grpc_action(

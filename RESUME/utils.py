@@ -1,4 +1,6 @@
 import logging
+from django.conf import settings
+from django.core.cache import cache
 
 from CORE.models import Process
 from JOB.models import Job
@@ -7,7 +9,6 @@ from RESUME.models import Resume
 from django.contrib.auth.models import User as AuthUser
 
 from RESUME.serializers import BaseResumeFullSerializer
-from letraz_server import settings
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc, letraz_utils_pb2
 from google.protobuf.json_format import MessageToDict
 
@@ -52,76 +53,79 @@ def bulk_call_tailor_resume_for_the_job(job:Job, source=None):
         call_tailor_resume_util_service(job=job, target_resume=in_progress_resume, source=source)
 
 
-def should_generate_thumbnail(resume: Resume, change_type: str, change_details: dict = None) -> bool:
+def should_generate_thumbnail(resume, change_type, change_details=None):
     """
     Determine if thumbnail generation is warranted based on change impact.
     
     Args:
-        resume: The resume object that was changed
-        change_type: Type of change that occurred
+        resume: Resume instance
+        change_type: Type of change ('section_added', 'section_removed', 'section_reordered', 'content_change', 'profile_change')
         change_details: Additional details about the change (optional)
     
     Returns:
-        bool: True if thumbnail should be generated, False otherwise
+        bool: True if thumbnail should be generated
     """
-    # Base resumes always get priority - any change warrants thumbnail update
+    # Base resumes always get priority - all changes warrant thumbnail updates
     if resume.base:
-        logger.info(f'Thumbnail generation triggered for base resume {resume.id} due to {change_type}')
+        logger.info(f'Base resume {resume.id} always gets thumbnail generation priority')
         return True
     
-    # High impact changes - always trigger thumbnail generation
-    high_impact_changes = ['section_added', 'section_removed', 'section_reordered', 'section_type_changed']
+    # High impact changes always trigger thumbnail generation
+    high_impact_changes = ['section_added', 'section_removed', 'section_reordered']
     if change_type in high_impact_changes:
-        logger.info(f'Thumbnail generation triggered for resume {resume.id} due to high impact change: {change_type}')
+        logger.info(f'High impact change "{change_type}" detected for resume {resume.id}')
         return True
     
-    # Medium impact changes - trigger based on content analysis
+    # Medium impact changes with threshold
     if change_type == 'content_change' and change_details:
         old_length = change_details.get('old_length', 0)
         new_length = change_details.get('new_length', 0)
-        
         if old_length > 0:
             change_percentage = abs(new_length - old_length) / old_length
-            threshold = getattr(settings, 'THUMBNAIL_IMPACT_THRESHOLD', 0.20)  # 20% default
-            
-            if change_percentage > threshold:
-                logger.info(f'Thumbnail generation triggered for resume {resume.id} due to significant content change: {change_percentage:.2%}')
-                return True
+            threshold_exceeded = change_percentage > getattr(settings, 'THUMBNAIL_IMPACT_THRESHOLD', 0.20)
+            if threshold_exceeded:
+                logger.info(f'Content change threshold exceeded ({change_percentage:.2%}) for resume {resume.id}')
+            return threshold_exceeded
     
-    # Profile changes for non-base resumes
+    # Profile changes for base resumes are already handled above
     if change_type == 'profile_change':
-        logger.info(f'Thumbnail generation triggered for resume {resume.id} due to profile change')
+        logger.info(f'Profile change detected for non-base resume {resume.id}')
         return True
     
-    # Low impact changes - typically don't trigger thumbnail generation
-    logger.debug(f'Thumbnail generation skipped for resume {resume.id} due to low impact change: {change_type}')
+    logger.debug(f'No thumbnail generation needed for change "{change_type}" on resume {resume.id}')
     return False
 
 
-def generate_resume_thumbnail(resume: Resume, change_type: str = None, change_details: dict = None, source: str = None):
+def generate_resume_thumbnail(resume):
     """
-    Generate thumbnail for resume, replacing any existing thumbnail process.
+    Generate thumbnail for resume, replacing any existing process.
     
     Args:
-        resume: The resume object to generate thumbnail for
-        change_type: Type of change that triggered the generation (optional)
-        change_details: Additional details about the change (optional)
-        source: Source of the generation request (optional)
-    
+        resume: Resume instance to generate thumbnail for
+        
     Returns:
-        tuple: (resume, error_response) - resume object if successful, error_response if failed
+        bool: True if generation was initiated successfully, False otherwise
     """
     # Check if thumbnail generation is enabled
     if not getattr(settings, 'THUMBNAIL_GENERATION_ENABLED', True):
-        logger.debug(f'Thumbnail generation disabled, skipping for resume {resume.id}')
-        return resume, None
+        logger.info(f'Thumbnail generation disabled, skipping resume {resume.id}')
+        return False
     
-    # Determine if thumbnail should be generated based on change impact
-    if change_type and not should_generate_thumbnail(resume, change_type, change_details):
-        logger.debug(f'Thumbnail generation skipped for resume {resume.id} due to low impact change')
-        return resume, None
+    # Check if gRPC channel is available
+    if not hasattr(settings, 'UTIL_GRPC_CHANNEL') or not settings.UTIL_GRPC_CHANNEL:
+        logger.error(f'gRPC channel not available for thumbnail generation of resume {resume.id}')
+        return False
     
-    logger.info(f'[source={source}] Starting thumbnail generation for resume {resume.id} (base: {resume.base})')
+    # Prevent duplicate thumbnail generation within short time window (10 seconds)
+    cache_key = f'thumbnail_generation_{resume.id}'
+    if cache.get(cache_key):
+        logger.debug(f'Thumbnail generation already in progress for resume {resume.id}, skipping duplicate')
+        return False
+    
+    # Set cache to prevent duplicates for 10 seconds
+    cache.set(cache_key, True, 10)
+    
+    logger.info(f'Triggering thumbnail generation for resume {resume.id} (base: {resume.base})')
     
     # Step 1: Clean up existing thumbnail process
     if resume.thumbnail_process:
@@ -129,9 +133,9 @@ def generate_resume_thumbnail(resume: Resume, change_type: str = None, change_de
         resume.thumbnail_process = None
         resume.save()
         old_process.delete()
-        logger.debug(f'[source={source}] Cleaned up existing thumbnail process for resume {resume.id}')
+        logger.debug(f'Cleaned up existing thumbnail process for resume {resume.id}')
     
-    # Step 2: Create new thumbnail process
+    # Step 2: Create new process
     thumbnail_process = Process.objects.create(desc='Resume Thumbnail Generation')
     resume.thumbnail_process = thumbnail_process
     resume.save()
@@ -142,24 +146,45 @@ def generate_resume_thumbnail(resume: Resume, change_type: str = None, change_de
         req = letraz_utils_pb2.ResumeScreenshotRequest(resume_id=resume.id)
         res = MessageToDict(resume_service.GenerateScreenshot(req))
         
-        logger.debug(f'[source={source}] :: generate_resume_thumbnail : Response: \n{res}')
+        logger.debug(f'Thumbnail generation response for resume {resume.id}: {res}')
         
         # Step 4: Update process with response
         thumbnail_process.status = res.get('status')
-        thumbnail_process.util_id = res.get('processId')
+        thumbnail_process.util_id = res.get('processId')  # gRPC response uses camelCase 'processId'
         thumbnail_process.status_details = res.get('message')
         thumbnail_process.save()
         
-        logger.info(f'[source={source}] Thumbnail generation accepted for resume {resume.id}, process_id: {res.get("processId")}')
-        return resume, None
+        logger.info(f'Thumbnail generation accepted for resume {resume.id}, process_id: {thumbnail_process.util_id}')
+        return True
         
     except Exception as e:
-        error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
-        logger.exception(f'Exception=> [Source={source}] | Thumbnail generation gRPC call error [UTIL]: {e.__str__()}')
-        
-        # Update process with failure status
+        # Handle gRPC errors
         thumbnail_process.status = Process.ProcessStatus.Failed.value
-        thumbnail_process.status_details = f'[Source={source}] - {e.__str__()}'
+        thumbnail_process.status_details = f'gRPC Error: {str(e)}'
         thumbnail_process.save()
+        logger.exception(f'Thumbnail generation failed for resume {resume.id}: {e}')
+        return False
+    finally:
+        # Always clear the cache after completion (success or failure)
+        cache.delete(cache_key)
+
+
+def calculate_content_change_details(old_content, new_content):
+    """
+    Calculate change details for content modifications.
+    
+    Args:
+        old_content: Original content string
+        new_content: Modified content string
         
-        return None, error_response
+    Returns:
+        dict: Change details with old_length and new_length
+    """
+    old_length = len(old_content or '')
+    new_length = len(new_content or '')
+    
+    return {
+        'old_length': old_length,
+        'new_length': new_length,
+        'change_percentage': abs(new_length - old_length) / old_length if old_length > 0 else 1.0
+    }
