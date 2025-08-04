@@ -29,12 +29,16 @@ def handle_resume_section_change(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=ResumeSection) 
 def handle_resume_section_delete(sender, instance, **kwargs):
     """Trigger thumbnail generation when resume sections are deleted"""
-    resume = instance.resume
-    
-    logger.debug(f'Resume section {instance.id} deleted from resume {resume.id}')
-    
-    if should_generate_thumbnail(resume, 'section_removed'):
-        generate_resume_thumbnail(resume)
+    # Check if the resume still exists before attempting thumbnail generation
+    # This prevents thumbnail generation during cascade deletion of the resume itself
+    try:
+        resume = Resume.objects.get(id=instance.resume.id)
+        logger.debug(f'Resume section {instance.id} deleted from resume {resume.id}')
+        
+        if should_generate_thumbnail(resume, 'section_removed'):
+            generate_resume_thumbnail(resume)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume {instance.resume.id} no longer exists, skipping thumbnail generation for deleted section {instance.id}')
 
 
 @receiver(post_save, sender=User)
@@ -76,12 +80,17 @@ def handle_education_delete(sender, instance, **kwargs):
     """Trigger thumbnail generation when education entries are deleted"""
     if not hasattr(instance, 'resume_section') or not instance.resume_section:
         return
-        
-    resume = instance.resume_section.resume
-    logger.debug(f'Education entry deleted from resume {resume.id}')
     
-    if should_generate_thumbnail(resume, 'section_removed'):
-        generate_resume_thumbnail(resume)
+    # Check if the resume still exists before attempting thumbnail generation
+    # This prevents thumbnail generation during cascade deletion of the resume itself
+    try:
+        resume = Resume.objects.get(id=instance.resume_section.resume.id)
+        logger.debug(f'Education entry deleted from resume {resume.id}')
+        
+        if should_generate_thumbnail(resume, 'section_removed'):
+            generate_resume_thumbnail(resume)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted education {instance.id}')
 
 
 @receiver(post_save, sender=Experience)
@@ -108,12 +117,17 @@ def handle_experience_delete(sender, instance, **kwargs):
     """Trigger thumbnail generation when experience entries are deleted"""
     if not hasattr(instance, 'resume_section') or not instance.resume_section:
         return
-        
-    resume = instance.resume_section.resume
-    logger.debug(f'Experience entry deleted from resume {resume.id}')
     
-    if should_generate_thumbnail(resume, 'section_removed'):
-        generate_resume_thumbnail(resume)
+    # Check if the resume still exists before attempting thumbnail generation
+    # This prevents thumbnail generation during cascade deletion of the resume itself
+    try:
+        resume = Resume.objects.get(id=instance.resume_section.resume.id)
+        logger.debug(f'Experience entry deleted from resume {resume.id}')
+        
+        if should_generate_thumbnail(resume, 'section_removed'):
+            generate_resume_thumbnail(resume)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted experience {instance.id}')
 
 
 @receiver(post_save, sender=Project)
@@ -140,12 +154,17 @@ def handle_project_delete(sender, instance, **kwargs):
     """Trigger thumbnail generation when project entries are deleted"""
     if not hasattr(instance, 'resume_section') or not instance.resume_section:
         return
-        
-    resume = instance.resume_section.resume
-    logger.debug(f'Project entry deleted from resume {resume.id}')
     
-    if should_generate_thumbnail(resume, 'section_removed'):
-        generate_resume_thumbnail(resume)
+    # Check if the resume still exists before attempting thumbnail generation
+    # This prevents thumbnail generation during cascade deletion of the resume itself
+    try:
+        resume = Resume.objects.get(id=instance.resume_section.resume.id)
+        logger.debug(f'Project entry deleted from resume {resume.id}')
+        
+        if should_generate_thumbnail(resume, 'section_removed'):
+            generate_resume_thumbnail(resume)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted project {instance.id}')
 
 
 @receiver(post_save, sender=Certification)
@@ -172,12 +191,17 @@ def handle_certification_delete(sender, instance, **kwargs):
     """Trigger thumbnail generation when certification entries are deleted"""
     if not hasattr(instance, 'resume_section') or not instance.resume_section:
         return
-        
-    resume = instance.resume_section.resume
-    logger.debug(f'Certification entry deleted from resume {resume.id}')
     
-    if should_generate_thumbnail(resume, 'section_removed'):
-        generate_resume_thumbnail(resume)
+    # Check if the resume still exists before attempting thumbnail generation
+    # This prevents thumbnail generation during cascade deletion of the resume itself
+    try:
+        resume = Resume.objects.get(id=instance.resume_section.resume.id)
+        logger.debug(f'Certification entry deleted from resume {resume.id}')
+        
+        if should_generate_thumbnail(resume, 'section_removed'):
+            generate_resume_thumbnail(resume)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted certification {instance.id}')
 
 
 @receiver(post_save, sender=Resume)

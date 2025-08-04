@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
+from RESUME.utils import disable_thumbnail_generation
 
 
 # Register your models here.
@@ -9,6 +10,16 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 class ResumeAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'job', 'base')
     list_filter = ('base', 'status')
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 # Register your models here.
@@ -16,6 +27,16 @@ class ResumeAdmin(admin.ModelAdmin):
 class ResumeSectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'resume', 'index', 'type')
     list_filter = ('type',)
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 @admin.register(Education)

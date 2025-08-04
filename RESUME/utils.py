@@ -1,4 +1,6 @@
 import logging
+import threading
+from contextlib import contextmanager
 from django.conf import settings
 from django.core.cache import cache
 
@@ -18,6 +20,24 @@ from letraz_server.settings import PROJECT_NAME
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
+
+# Thread-local storage for deletion context
+_local = threading.local()
+
+
+@contextmanager
+def disable_thumbnail_generation():
+    """Context manager to temporarily disable thumbnail generation"""
+    _local.disable_thumbnails = True
+    try:
+        yield
+    finally:
+        _local.disable_thumbnails = False
+
+
+def is_thumbnail_generation_disabled():
+    """Check if thumbnail generation is currently disabled"""
+    return getattr(_local, 'disable_thumbnails', False)
 
 
 def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None):
@@ -65,6 +85,11 @@ def should_generate_thumbnail(resume, change_type, change_details=None):
     Returns:
         bool: True if thumbnail should be generated
     """
+    # Check if thumbnail generation is temporarily disabled (e.g., during admin deletions)
+    if is_thumbnail_generation_disabled():
+        logger.debug(f'Thumbnail generation disabled, skipping resume {resume.id}')
+        return False
+    
     # Base resumes always get priority - all changes warrant thumbnail updates
     if resume.base:
         logger.info(f'Base resume {resume.id} always gets thumbnail generation priority')
@@ -106,6 +131,14 @@ def generate_resume_thumbnail(resume):
     Returns:
         bool: True if generation was initiated successfully, False otherwise
     """
+    # Additional safety check: Ensure the resume still exists in database
+    # This prevents issues during cascade deletions
+    try:
+        Resume.objects.get(id=resume.id)
+    except Resume.DoesNotExist:
+        logger.debug(f'Resume {resume.id} no longer exists, skipping thumbnail generation')
+        return False
+    
     # Check if thumbnail generation is enabled
     if not getattr(settings, 'THUMBNAIL_GENERATION_ENABLED', True):
         logger.info(f'Thumbnail generation disabled, skipping resume {resume.id}')
@@ -160,7 +193,9 @@ def generate_resume_thumbnail(resume):
     except Exception as e:
         # Handle gRPC errors
         thumbnail_process.status = Process.ProcessStatus.Failed.value
-        thumbnail_process.status_details = f'gRPC Error: {str(e)}'
+        # Truncate error message to fit database field (max 250 chars)
+        error_msg = f'gRPC Error: {str(e)}'
+        thumbnail_process.status_details = error_msg[:247] + '...' if len(error_msg) > 250 else error_msg
         thumbnail_process.save()
         logger.exception(f'Thumbnail generation failed for resume {resume.id}: {e}')
         return False
