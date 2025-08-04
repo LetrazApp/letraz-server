@@ -28,6 +28,7 @@ from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2
 from google.protobuf.json_format import ParseDict
 from RESUME.serializers import ResumeSectionFullSerializer
+from RESUME.utils import generate_resume_thumbnail
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -1311,5 +1312,55 @@ def tailor_resume(request):
     except Exception as e:
         error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(), extra={'data': request.data})
         logger.exception(f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
+        return error_response.response
+
+
+@extend_schema(
+    methods=['POST'],
+    tags=['Resume object'],
+    summary="Manually trigger thumbnail generation for a resume",
+    responses={
+        200: ResumeFullSerializer,
+        400: ErrorSerializer,
+        404: ErrorSerializer
+    }
+)
+@api_view(['POST'])
+def trigger_thumbnail_generation(request, resume_id):
+    """
+    Manually trigger thumbnail generation for a specific resume.
+    This endpoint can be used for testing or when automatic generation is disabled.
+    """
+    try:
+        resume = Resume.objects.get(id=resume_id, user=request.user)
+        
+        # Manually trigger thumbnail generation
+        updated_resume, error = generate_resume_thumbnail(
+            resume=resume,
+            change_type='manual_trigger',
+            source='api_endpoint'
+        )
+        
+        if error:
+            return error.response
+        
+        return Response(ResumeFullSerializer(updated_resume, many=False).data)
+        
+    except Resume.DoesNotExist:
+        error_response = ErrorResponse(
+            code=ErrorCode.NOT_FOUND,
+            message='Resume not found!',
+            details={'resume_id': resume_id},
+            status_code=status.HTTP_404_NOT_FOUND
+        )
+        return error_response.response
+    except Exception as e:
+        error_response = ErrorResponse(
+            code=ErrorCode.INTERNAL_SERVER_ERROR,
+            message=e.__str__(),
+            details={'resume_id': resume_id},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        logger.exception(f'Error in manual thumbnail generation for resume {resume_id}: {e}')
         return error_response.response
 
