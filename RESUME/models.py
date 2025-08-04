@@ -48,10 +48,10 @@ class Resume(models.Model):
             ),
         ]
 
-    def create_section(self, section_type):
-        next_resume_section = self.resumesection_set.all().order_by(
-            '-index').first().index + 1 if self.resumesection_set.exists() else 0
-        new_resume_section = ResumeSection.objects.create(
+    async def acreate_section(self, section_type):
+        last_section = await self.resumesection_set.all().order_by('-index').afirst()
+        next_resume_section = last_section.index + 1 if last_section else 0
+        new_resume_section = await ResumeSection.objects.acreate(
             resume_id=self.id, type=section_type, index=next_resume_section
         )
         return new_resume_section
@@ -61,27 +61,28 @@ class Resume(models.Model):
             return self.variations.order_by('version').last().version + 1
         return 1
 
-    def get_skill_resume_section(self):
+    async def aget_skill_resume_section(self):
         resume_skill_section_qs = self.resumesection_set.filter(
             type=ResumeSection.ResumeSectionType.Skill)
-        if resume_skill_section_qs.exists():
-            return resume_skill_section_qs.first()
+        if await resume_skill_section_qs.aexists():
+            return await resume_skill_section_qs.afirst()
         else:
-            return self.create_section(ResumeSection.ResumeSectionType.Skill)
+            return await self.acreate_section(ResumeSection.ResumeSectionType.Skill)
 
-    def add_skill(self, skill_name, skill_category=None, skill_proficiency=None):
+    async def aadd_skill(self, skill_name, skill_category=None, skill_proficiency=None):
+        from CORE.models import Skill
         skill: Skill
-        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
-        resume_skill_section: ResumeSection = self.get_skill_resume_section()
+        skill, created = await Skill.objects.aget_or_create(name=skill_name, category=skill_category)
+        resume_skill_section: ResumeSection = await self.aget_skill_resume_section()
         proficiency: Proficiency
-        proficiency, created = resume_skill_section.proficiency_set.get_or_create(skill=skill)
+        proficiency, created = await resume_skill_section.proficiency_set.aget_or_create(skill=skill)
         if skill_proficiency:
             if str(skill_proficiency) not in Proficiency.Level.values:
                 raise ValueError('Invalid proficiency level.')
             proficiency.level = skill_proficiency
         else:
             proficiency.level = None
-        proficiency.save()
+        await proficiency.asave()
         return proficiency
 
     def edit_skill(self, proficiency_id, skill_name, skill_category, skill_proficiency):
@@ -281,16 +282,17 @@ class Project(models.Model):
         ordering = ['-created_at']
 
 
-    def add_skill_only_to_project(self, skill_name, skill_category=None):
+    async def add_skill_only_to_project(self, skill_name, skill_category=None):
+        from CORE.models import Skill
         skill: Skill
-        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
-        self.skills_used.add(skill)
-        self.save()
+        skill, created = await Skill.objects.aget_or_create(name=skill_name, category=skill_category)
+        await self.skills_used.aadd(skill)
+        await self.asave()
         return skill
 
-    def add_skill(self, skill_name, skill_category=None):
-        skill: Skill = self.add_skill_only_to_project(skill_name, skill_category)
-        self.resume_section.resume.add_skill(skill_name, skill_category)
+    async def add_skill(self, skill_name, skill_category=None):
+        skill: Skill = await self.add_skill_only_to_project(skill_name, skill_category)
+        await self.resume_section.resume.aadd_skill(skill_name, skill_category)
         return skill
 
 class Certification(models.Model):

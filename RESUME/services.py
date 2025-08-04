@@ -112,7 +112,7 @@ class TailorResumeCallBackService(generics.GenericService):
                         if section_data.get('skills_used'):
                             skills = section_data.get('skills_used')
                             for skill in skills:
-                                await asyncio.to_thread(project.add_skill_only_to_project, skill_name=skill.get('name'), skill_category=skill.get('category'))
+                                await project.add_skill_only_to_project(skill_name=skill.get('name'), skill_category=skill.get('category'))
                         project.started_from_month = section_data.get('started_from_month')
                         project.started_from_year = section_data.get('started_from_year')
                         project.finished_at_month = section_data.get('finished_at_month')
