@@ -85,9 +85,9 @@ def should_generate_thumbnail(resume, change_type, change_details=None):
     Returns:
         bool: True if thumbnail should be generated
     """
-    # Check if thumbnail generation is temporarily disabled (e.g., during admin deletions)
-    if is_thumbnail_generation_disabled():
-        logger.debug(f'Thumbnail generation disabled, skipping resume {resume.id}')
+    # Check if thumbnail generation is temporarily disabled for this resume instance
+    if hasattr(resume, '_skip_thumbnail_generation') and resume._skip_thumbnail_generation:
+        logger.debug(f'Thumbnail generation skipped for resume {resume.id} due to bulk operation flag')
         return False
     
     # Base resumes always get priority - all changes warrant thumbnail updates

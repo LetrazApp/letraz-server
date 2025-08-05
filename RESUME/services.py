@@ -46,6 +46,12 @@ class TailorResumeCallBackService(generics.GenericService):
             raise InvalidArgument(f"Must return a resume object with sections")
         try:
             in_progress_resume: Resume = await in_progress_resume_qs.afirst()
+            
+            # Set a flag to skip thumbnail generation during bulk tailoring
+            # This approach doesn't affect other users' resumes
+            setattr(in_progress_resume, '_skip_thumbnail_generation', True)
+            logger.debug(f"[util id - {util_process_id}] Set thumbnail generation skip flag for resume {in_progress_resume.id}")
+            
             # Deleting all existing Resume section
             await in_progress_resume.resumesection_set.all().adelete()
             user = await User.objects.aget(id=in_progress_resume.user_id)
@@ -132,10 +138,16 @@ class TailorResumeCallBackService(generics.GenericService):
                         await certification.asave()
                     else:
                         pass
+                        
             in_progress_resume.status = Resume.Status.Success.value
+            
+            # Clear the skip flag before saving to ensure normal signal behavior for future updates
+            if hasattr(in_progress_resume, '_skip_thumbnail_generation'):
+                delattr(in_progress_resume, '_skip_thumbnail_generation')
+            
             await in_progress_resume.asave()
             
-            # Trigger thumbnail generation after successful resume tailoring
+            # Trigger thumbnail generation ONCE after successful resume tailoring
             try:
                 # Use asyncio.to_thread to run sync function in async context
                 await asyncio.to_thread(generate_resume_thumbnail, in_progress_resume)
