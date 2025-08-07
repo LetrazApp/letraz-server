@@ -188,6 +188,14 @@ class Experience(models.Model):
         VOLUNTEER = 'vol'
         TRAINEE = 'tra'
 
+        @staticmethod
+        def get_value_by_display(display):
+            for choice in Experience.EmploymentType.choices:
+                value, label = choice
+                if label == display:
+                    return value
+            return None
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False,
                           help_text='The unique identifier for the experience entry.')
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text='The user who the experience entry belongs to.')
@@ -272,11 +280,16 @@ class Project(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-    def add_skill(self, skill_name, skill_category=None):
+
+    def add_skill_only_to_project(self, skill_name, skill_category=None):
         skill: Skill
         skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
         self.skills_used.add(skill)
         self.save()
+        return skill
+
+    def add_skill(self, skill_name, skill_category=None):
+        skill: Skill = self.add_skill_only_to_project(skill_name, skill_category)
         self.resume_section.resume.add_skill(skill_name, skill_category)
         return skill
 
