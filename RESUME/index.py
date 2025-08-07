@@ -1,6 +1,11 @@
+import logging
 import algoliasearch_django as algoliasearch
 from algoliasearch_django import AlgoliaIndex
 from RESUME.models import Resume, ResumeSection
+from letraz_server.settings import PROJECT_NAME
+
+__module_name = f'{PROJECT_NAME}.' + __name__
+logger = logging.getLogger(__module_name)
 
 
 class ResumeIndex(AlgoliaIndex):
@@ -89,21 +94,21 @@ class ResumeIndex(AlgoliaIndex):
         try:
             return instance.user.id if instance.user else None
         except Exception as e:
-            print(f"Error getting user_id: {e}")
+            logger.exception(f"Error getting user_id: {e}")
             return None
     
     def get_user_full_name(self, instance):
         try:
             return instance.user.get_full_name() if instance.user else ""
         except Exception as e:
-            print(f"Error getting user_full_name: {e}")
+            logger.exception(f"Error getting user_full_name: {e}")
             return ""
     
     def get_user_email(self, instance):
         try:
             return instance.user.email if instance.user else ""
         except Exception as e:
-            print(f"Error getting user_email: {e}")
+            logger.exception(f"Error getting user_email: {e}")
             return ""
     
     def get_job_id(self, instance):
@@ -133,10 +138,10 @@ class ResumeIndex(AlgoliaIndex):
                         'current': edu.current,
                         'description': edu.description or ""
                     })
-            print(f"Education data for {instance.id}: {education_list}")
+            logger.debug(f"Education data for {instance.id}: {education_list}")
             return education_list
         except Exception as e:
-            print(f"Error getting education_data for {instance.id}: {e}")
+            logger.exception(f"Error getting education_data for {instance.id}: {e}")
             return []
     
     def get_experience_data(self, instance):
@@ -158,10 +163,10 @@ class ResumeIndex(AlgoliaIndex):
                         'current': exp.current,
                         'description': exp.description or ""
                     })
-            print(f"Experience data for {instance.id}: {experience_list}")
+            logger.debug(f"Experience data for {instance.id}: {experience_list}")
             return experience_list
         except Exception as e:
-            print(f"Error getting experience_data for {instance.id}: {e}")
+            logger.exception(f"Error getting experience_data for {instance.id}: {e}")
             return []
     
     def get_skills_data(self, instance):

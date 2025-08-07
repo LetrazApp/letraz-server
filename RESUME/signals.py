@@ -1,7 +1,12 @@
+import logging
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.conf import settings
 from RESUME.models import Resume, Education, Experience, Proficiency, Project, Certification
+from letraz_server.settings import PROJECT_NAME
+
+__module_name = f'{PROJECT_NAME}.' + __name__
+logger = logging.getLogger(__module_name)
 
 # Only import algoliasearch if it's available
 if getattr(settings, 'ALGOLIA_STATUS', 'DISABLED') == 'OPERATIONAL':
@@ -28,7 +33,7 @@ def update_resume_index_on_resume_change(sender, instance, **kwargs):
             # If this is not a base resume AND successfully processed, update it in Algolia
             algoliasearch.save_record(instance)
     except Exception as e:
-        print(f"Error updating Algolia index for Resume {instance.id}: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.id}: {e}")
 
 
 @receiver([post_save, post_delete], sender=Education)
@@ -44,7 +49,7 @@ def update_resume_index_on_education_change(sender, instance, **kwargs):
                 algoliasearch.save_record(resume)
     except Exception as e:
         # Log error but don't fail the operation
-        print(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Education change: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Education change: {e}")
 
 
 @receiver([post_save, post_delete], sender=Experience)
@@ -59,7 +64,7 @@ def update_resume_index_on_experience_change(sender, instance, **kwargs):
             elif kwargs.get('signal').__name__ == 'post_delete':
                 algoliasearch.save_record(resume)
     except Exception as e:
-        print(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Experience change: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Experience change: {e}")
 
 
 @receiver([post_save, post_delete], sender=Proficiency)
@@ -74,7 +79,7 @@ def update_resume_index_on_proficiency_change(sender, instance, **kwargs):
             elif kwargs.get('signal').__name__ == 'post_delete':
                 algoliasearch.save_record(resume)
     except Exception as e:
-        print(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Proficiency change: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Proficiency change: {e}")
 
 
 @receiver([post_save, post_delete], sender=Project)
@@ -89,7 +94,7 @@ def update_resume_index_on_project_change(sender, instance, **kwargs):
             elif kwargs.get('signal').__name__ == 'post_delete':
                 algoliasearch.save_record(resume)
     except Exception as e:
-        print(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Project change: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Project change: {e}")
 
 
 @receiver([post_save, post_delete], sender=Certification)
@@ -104,4 +109,4 @@ def update_resume_index_on_certification_change(sender, instance, **kwargs):
             elif kwargs.get('signal').__name__ == 'post_delete':
                 algoliasearch.save_record(resume)
     except Exception as e:
-        print(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Certification change: {e}")
+        logger.exception(f"Error updating Algolia index for Resume {instance.resume_section.resume.id} after Certification change: {e}")

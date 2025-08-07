@@ -306,6 +306,3 @@ class Certification(models.Model):
     credential_url = models.URLField(blank=True, null=True, help_text="Link to the certification credential.")
     created_at = models.DateTimeField(auto_now_add=True, help_text="Timestamp when the certification was first created.")
     updated_at = models.DateTimeField(auto_now=True, help_text="Timestamp when the certification was last updated.")
-
-    class Meta:
-        ordering = ['-created_at']
