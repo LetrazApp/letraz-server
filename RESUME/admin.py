@@ -16,14 +16,11 @@ class ResumeAdmin(admin.ModelAdmin):
         with disable_thumbnail_generation():
             # Log the deletion for better tracking
             resume_ids = list(queryset.values_list('id', flat=True))
-            print(f"Admin bulk deleting resumes: {resume_ids}")
             super().delete_queryset(request, queryset)
     
     def delete_model(self, request, obj):
         """Override to disable thumbnail generation during single object deletion"""
         with disable_thumbnail_generation():
-            # Log the deletion for better tracking
-            print(f"Admin deleting resume: {obj.id}")
             super().delete_model(request, obj)
 
 

@@ -212,24 +212,3 @@ def generate_resume_thumbnail(resume):
     finally:
         # Always clear the cache after completion (success or failure)
         cache.delete(cache_key)
-
-
-def calculate_content_change_details(old_content, new_content):
-    """
-    Calculate change details for content modifications.
-    
-    Args:
-        old_content: Original content string
-        new_content: Modified content string
-        
-    Returns:
-        dict: Change details with old_length and new_length
-    """
-    old_length = len(old_content or '')
-    new_length = len(new_content or '')
-    
-    return {
-        'old_length': old_length,
-        'new_length': new_length,
-        'change_percentage': abs(new_length - old_length) / old_length if old_length > 0 else 1.0
-    }

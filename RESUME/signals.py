@@ -3,7 +3,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from PROFILE.models import User
 from .models import Resume, ResumeSection, Education, Experience, Project, Certification
-from .utils import should_generate_thumbnail, generate_resume_thumbnail, calculate_content_change_details
+from .utils import should_generate_thumbnail, generate_resume_thumbnail
 from letraz_server.settings import PROJECT_NAME
 
 __module_name = f'{PROJECT_NAME}.' + __name__
