@@ -1235,7 +1235,7 @@ def tailor_resume(request):
                         res = MessageToDict(resume_service.TailorResume(req))
                         logger.debug(f'Tailor Resume Process: \n{res}')
                         process.status = res.get('status')
-                        process.util_id = res.get('util_id')
+                        process.util_id = res.get('processId')
                         process.status_details = res.get('message')
                         process.save()
                         new_resume_for_job.process = process
