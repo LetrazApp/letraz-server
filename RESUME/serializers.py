@@ -11,7 +11,7 @@ class ResumeShortSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'status')
+        fields = ('id', 'base', 'user', 'job', 'status', 'thumbnail')
         read_only_fields = ['id']
 
     @staticmethod
@@ -28,7 +28,7 @@ class BaseResumeFullSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'sections')
+        fields = ('id', 'base', 'user', 'sections', 'thumbnail')
         read_only_fields = ['id']
 
     @staticmethod
@@ -46,7 +46,7 @@ class ResumeFullSerializer(BaseResumeFullSerializer):
 
     class Meta:
         model = Resume
-        fields = ('id', 'base', 'user', 'job', 'status', 'sections')
+        fields = ('id', 'base', 'user', 'job', 'status', 'sections', 'thumbnail')
         read_only_fields = ['id']
 
     @staticmethod
