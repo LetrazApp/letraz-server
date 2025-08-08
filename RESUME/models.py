@@ -284,15 +284,17 @@ class Project(models.Model):
         ordering = ['-created_at']
 
 
-    def add_skill_only_to_project(self, skill_name, skill_category=None):
+    async def add_skill_only_to_project(self, skill_name, skill_category=None):
         skill: Skill
-        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
-        self.skills_used.add(skill)
-        self.save()
+        skill, created = await Skill.objects.aget_or_create(name=skill_name, category=skill_category)
+        await self.skills_used.aadd(skill)
+        await self.asave()
         return skill
 
     def add_skill(self, skill_name, skill_category=None):
-        skill: Skill = self.add_skill_only_to_project(skill_name, skill_category)
+        skill, created = Skill.objects.get_or_create(name=skill_name, category=skill_category)
+        self.skills_used.add(skill)
+        self.save()
         self.resume_section.resume.add_skill(skill_name, skill_category)
         return skill
 
