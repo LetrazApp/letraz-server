@@ -4,6 +4,10 @@ package letraz_server.RESUME;
 
 import "google/protobuf/struct.proto";
 
+service GenerateScreenshotCallBackController {
+    rpc GenerateScreenshotCallBack(GenerateScreenshotCallBackRequest) returns (GenerateScreenshotCallBackResponse) {}
+}
+
 service TailorResumeCallBackController {
     rpc TailorResumeCallBack(TailorResumeCallBackRequest) returns (TailorResumeCallBackResponse) {}
 }
@@ -14,10 +18,36 @@ message DataRequest {
     string thread_id = 3;
 }
 
+message GenerateScreenshotCallBackRequest {
+    string processId = 1;
+    string status = 2;
+    ScreenshotDataRequest data = 3;
+    string timestamp = 4;
+    string operation = 5;
+    string processing_time = 6;
+    ScreenshotMetadataRequest metadata = 7;
+}
+
+message GenerateScreenshotCallBackResponse {
+    optional string msg = 1;
+}
+
 message MetadataRequest {
     string company = 1;
     string job_title = 2;
     string resume_id = 3;
+}
+
+message ScreenshotDataRequest {
+    string screenshot_url = 1;
+    string resume_id = 2;
+    int32 file_size_bytes = 3;
+}
+
+message ScreenshotMetadataRequest {
+    int32 file_size = 1;
+    string resume_id = 2;
+    string screenshot_url = 3;
 }
 
 message SectionRequest {

@@ -25,6 +25,78 @@ if _version_not_supported:
     )
 
 
+class GenerateScreenshotCallBackControllerStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.GenerateScreenshotCallBack = channel.unary_unary(
+                '/letraz_server.RESUME.GenerateScreenshotCallBackController/GenerateScreenshotCallBack',
+                request_serializer=RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackRequest.SerializeToString,
+                response_deserializer=RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackResponse.FromString,
+                _registered_method=True)
+
+
+class GenerateScreenshotCallBackControllerServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def GenerateScreenshotCallBack(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_GenerateScreenshotCallBackControllerServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'GenerateScreenshotCallBack': grpc.unary_unary_rpc_method_handler(
+                    servicer.GenerateScreenshotCallBack,
+                    request_deserializer=RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackRequest.FromString,
+                    response_serializer=RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackResponse.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'letraz_server.RESUME.GenerateScreenshotCallBackController', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('letraz_server.RESUME.GenerateScreenshotCallBackController', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class GenerateScreenshotCallBackController(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def GenerateScreenshotCallBack(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/letraz_server.RESUME.GenerateScreenshotCallBackController/GenerateScreenshotCallBack',
+            RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackRequest.SerializeToString,
+            RESUME_dot_grpc_dot_RESUME__pb2.GenerateScreenshotCallBackResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+
 class TailorResumeCallBackControllerStub(object):
     """Missing associated documentation comment in .proto file."""
 

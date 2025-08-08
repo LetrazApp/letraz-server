@@ -32,7 +32,7 @@ class Resume(models.Model):
                                help_text='Whether the resume is a base resume for the user. One user can ')
     variations = models.ManyToManyField('Resume', related_name='related_resumes', blank=True)
     version = models.IntegerField(default=1, help_text='The version of the resume.')
-
+    thumbnail = models.URLField(null=True, blank=True)
     status = models.CharField(max_length=1, choices=Status.choices, null=True, blank=True, help_text='The status of the job as mentioned in the job posting. (optional)')
     process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True)
     thumbnail_process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True, 

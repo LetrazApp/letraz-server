@@ -118,3 +118,33 @@ class TailorResumeCallBackResponseSerializer(proto_serializers.ProtoSerializer):
     class Meta:
         proto_class = RESUME_pb2.TailorResumeCallBackResponse
     msg = serializers.CharField(required=False)
+
+# --------------- GenerateScreenshotCallBack ---------------
+# Data container serializer for screenshot request
+class ScreenshotDataProtoSerializer(proto_serializers.ProtoSerializer):
+    screenshot_url = serializers.URLField()
+    resume_id = serializers.CharField()
+    file_size_bytes = serializers.IntegerField()
+
+# Metadata serializer for screenshot request
+class ScreenshotMetadataProtoSerializer(proto_serializers.ProtoSerializer):
+    file_size = serializers.IntegerField()
+    resume_id = serializers.CharField()
+    screenshot_url = serializers.URLField()
+
+# Main screenshot request serializer
+class GenerateScreenshotCallBackRequestProtoSerializer(proto_serializers.ProtoSerializer):
+    processId = serializers.CharField()
+    status = serializers.CharField()
+    data = ScreenshotDataProtoSerializer()
+    timestamp = serializers.DateTimeField()
+    operation = serializers.CharField()
+    processing_time = serializers.CharField()
+    metadata = ScreenshotMetadataProtoSerializer()
+
+# Main screenshot response serializer
+class GenerateScreenshotCallBackResponseSerializer(proto_serializers.ProtoSerializer):
+    class Meta:
+        proto_class = RESUME_pb2.GenerateScreenshotCallBackResponse
+    msg = serializers.CharField(required=False)
+
