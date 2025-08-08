@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18RESUME/grpc/RESUME.proto\x12\x14letraz_server.RESUME\x1a\x1cgoogle/protobuf/struct.proto\"\xa4\x01\n\x0b\x44\x61taRequest\x12\x44\n\x0ftailored_resume\x18\x01 \x01(\x0b\x32+.letraz_server.RESUME.TailoredResumeRequest\x12<\n\x0bsuggestions\x18\x02 \x03(\x0b\x32\'.letraz_server.RESUME.SuggestionRequest\x12\x11\n\tthread_id\x18\x03 \x01(\t\"H\n\x0fMetadataRequest\x12\x0f\n\x07\x63ompany\x18\x01 \x01(\t\x12\x11\n\tjob_title\x18\x02 \x01(\t\x12\x11\n\tresume_id\x18\x03 \x01(\t\"E\n\x0eSectionRequest\x12\x0c\n\x04type\x18\x01 \x01(\t\x12%\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\"\x97\x01\n\x11SuggestionRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x10\n\x08priority\x18\x03 \x01(\t\x12\x0e\n\x06impact\x18\x04 \x01(\t\x12\x0f\n\x07section\x18\x05 \x01(\t\x12\x0f\n\x07\x63urrent\x18\x06 \x01(\t\x12\x11\n\tsuggested\x18\x07 \x01(\t\x12\x11\n\treasoning\x18\x08 \x01(\t\"\xe9\x01\n\x1bTailorResumeCallBackRequest\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12/\n\x04\x64\x61ta\x18\x03 \x01(\x0b\x32!.letraz_server.RESUME.DataRequest\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\x11\n\toperation\x18\x05 \x01(\t\x12\x17\n\x0fprocessing_time\x18\x06 \x01(\t\x12\x37\n\x08metadata\x18\x07 \x01(\x0b\x32%.letraz_server.RESUME.MetadataRequest\"8\n\x1cTailorResumeCallBackResponse\x12\x10\n\x03msg\x18\x01 \x01(\tH\x00\x88\x01\x01\x42\x06\n\x04_msg\"[\n\x15TailoredResumeRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\x36\n\x08sections\x18\x02 \x03(\x0b\x32$.letraz_server.RESUME.SectionRequest2\xa1\x01\n\x1eTailorResumeCallBackController\x12\x7f\n\x14TailorResumeCallBack\x12\x31.letraz_server.RESUME.TailorResumeCallBackRequest\x1a\x32.letraz_server.RESUME.TailorResumeCallBackResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18RESUME/grpc/RESUME.proto\x12\x14letraz_server.RESUME\x1a\x1cgoogle/protobuf/struct.proto\"\xa4\x01\n\x0b\x44\x61taRequest\x12\x44\n\x0ftailored_resume\x18\x01 \x01(\x0b\x32+.letraz_server.RESUME.TailoredResumeRequest\x12<\n\x0bsuggestions\x18\x02 \x03(\x0b\x32\'.letraz_server.RESUME.SuggestionRequest\x12\x11\n\tthread_id\x18\x03 \x01(\t\"\x83\x02\n!GenerateScreenshotCallBackRequest\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x39\n\x04\x64\x61ta\x18\x03 \x01(\x0b\x32+.letraz_server.RESUME.ScreenshotDataRequest\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\x11\n\toperation\x18\x05 \x01(\t\x12\x17\n\x0fprocessing_time\x18\x06 \x01(\t\x12\x41\n\x08metadata\x18\x07 \x01(\x0b\x32/.letraz_server.RESUME.ScreenshotMetadataRequest\">\n\"GenerateScreenshotCallBackResponse\x12\x10\n\x03msg\x18\x01 \x01(\tH\x00\x88\x01\x01\x42\x06\n\x04_msg\"H\n\x0fMetadataRequest\x12\x0f\n\x07\x63ompany\x18\x01 \x01(\t\x12\x11\n\tjob_title\x18\x02 \x01(\t\x12\x11\n\tresume_id\x18\x03 \x01(\t\"[\n\x15ScreenshotDataRequest\x12\x16\n\x0escreenshot_url\x18\x01 \x01(\t\x12\x11\n\tresume_id\x18\x02 \x01(\t\x12\x17\n\x0f\x66ile_size_bytes\x18\x03 \x01(\x05\"Y\n\x19ScreenshotMetadataRequest\x12\x11\n\tfile_size\x18\x01 \x01(\x05\x12\x11\n\tresume_id\x18\x02 \x01(\t\x12\x16\n\x0escreenshot_url\x18\x03 \x01(\t\"E\n\x0eSectionRequest\x12\x0c\n\x04type\x18\x01 \x01(\t\x12%\n\x04\x64\x61ta\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct\"\x97\x01\n\x11SuggestionRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x10\n\x08priority\x18\x03 \x01(\t\x12\x0e\n\x06impact\x18\x04 \x01(\t\x12\x0f\n\x07section\x18\x05 \x01(\t\x12\x0f\n\x07\x63urrent\x18\x06 \x01(\t\x12\x11\n\tsuggested\x18\x07 \x01(\t\x12\x11\n\treasoning\x18\x08 \x01(\t\"\xe9\x01\n\x1bTailorResumeCallBackRequest\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12/\n\x04\x64\x61ta\x18\x03 \x01(\x0b\x32!.letraz_server.RESUME.DataRequest\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\x11\n\toperation\x18\x05 \x01(\t\x12\x17\n\x0fprocessing_time\x18\x06 \x01(\t\x12\x37\n\x08metadata\x18\x07 \x01(\x0b\x32%.letraz_server.RESUME.MetadataRequest\"8\n\x1cTailorResumeCallBackResponse\x12\x10\n\x03msg\x18\x01 \x01(\tH\x00\x88\x01\x01\x42\x06\n\x04_msg\"[\n\x15TailoredResumeRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\x36\n\x08sections\x18\x02 \x03(\x0b\x32$.letraz_server.RESUME.SectionRequest2\xba\x01\n$GenerateScreenshotCallBackController\x12\x91\x01\n\x1aGenerateScreenshotCallBack\x12\x37.letraz_server.RESUME.GenerateScreenshotCallBackRequest\x1a\x38.letraz_server.RESUME.GenerateScreenshotCallBackResponse\"\x00\x32\xa1\x01\n\x1eTailorResumeCallBackController\x12\x7f\n\x14TailorResumeCallBack\x12\x31.letraz_server.RESUME.TailorResumeCallBackRequest\x1a\x32.letraz_server.RESUME.TailorResumeCallBackResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,18 +34,28 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_DATAREQUEST']._serialized_start=81
   _globals['_DATAREQUEST']._serialized_end=245
-  _globals['_METADATAREQUEST']._serialized_start=247
-  _globals['_METADATAREQUEST']._serialized_end=319
-  _globals['_SECTIONREQUEST']._serialized_start=321
-  _globals['_SECTIONREQUEST']._serialized_end=390
-  _globals['_SUGGESTIONREQUEST']._serialized_start=393
-  _globals['_SUGGESTIONREQUEST']._serialized_end=544
-  _globals['_TAILORRESUMECALLBACKREQUEST']._serialized_start=547
-  _globals['_TAILORRESUMECALLBACKREQUEST']._serialized_end=780
-  _globals['_TAILORRESUMECALLBACKRESPONSE']._serialized_start=782
-  _globals['_TAILORRESUMECALLBACKRESPONSE']._serialized_end=838
-  _globals['_TAILOREDRESUMEREQUEST']._serialized_start=840
-  _globals['_TAILOREDRESUMEREQUEST']._serialized_end=931
-  _globals['_TAILORRESUMECALLBACKCONTROLLER']._serialized_start=934
-  _globals['_TAILORRESUMECALLBACKCONTROLLER']._serialized_end=1095
+  _globals['_GENERATESCREENSHOTCALLBACKREQUEST']._serialized_start=248
+  _globals['_GENERATESCREENSHOTCALLBACKREQUEST']._serialized_end=507
+  _globals['_GENERATESCREENSHOTCALLBACKRESPONSE']._serialized_start=509
+  _globals['_GENERATESCREENSHOTCALLBACKRESPONSE']._serialized_end=571
+  _globals['_METADATAREQUEST']._serialized_start=573
+  _globals['_METADATAREQUEST']._serialized_end=645
+  _globals['_SCREENSHOTDATAREQUEST']._serialized_start=647
+  _globals['_SCREENSHOTDATAREQUEST']._serialized_end=738
+  _globals['_SCREENSHOTMETADATAREQUEST']._serialized_start=740
+  _globals['_SCREENSHOTMETADATAREQUEST']._serialized_end=829
+  _globals['_SECTIONREQUEST']._serialized_start=831
+  _globals['_SECTIONREQUEST']._serialized_end=900
+  _globals['_SUGGESTIONREQUEST']._serialized_start=903
+  _globals['_SUGGESTIONREQUEST']._serialized_end=1054
+  _globals['_TAILORRESUMECALLBACKREQUEST']._serialized_start=1057
+  _globals['_TAILORRESUMECALLBACKREQUEST']._serialized_end=1290
+  _globals['_TAILORRESUMECALLBACKRESPONSE']._serialized_start=1292
+  _globals['_TAILORRESUMECALLBACKRESPONSE']._serialized_end=1348
+  _globals['_TAILOREDRESUMEREQUEST']._serialized_start=1350
+  _globals['_TAILOREDRESUMEREQUEST']._serialized_end=1441
+  _globals['_GENERATESCREENSHOTCALLBACKCONTROLLER']._serialized_start=1444
+  _globals['_GENERATESCREENSHOTCALLBACKCONTROLLER']._serialized_end=1630
+  _globals['_TAILORRESUMECALLBACKCONTROLLER']._serialized_start=1633
+  _globals['_TAILORRESUMECALLBACKCONTROLLER']._serialized_end=1794
 # @@protoc_insertion_point(module_scope)
