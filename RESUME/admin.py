@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
+from RESUME.utils import disable_thumbnail_generation
 
 
 # Register your models here.
@@ -9,6 +10,18 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 class ResumeAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'job', 'base')
     list_filter = ('base', 'status')
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            # Log the deletion for better tracking
+            resume_ids = list(queryset.values_list('id', flat=True))
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 # Register your models here.
@@ -16,18 +29,48 @@ class ResumeAdmin(admin.ModelAdmin):
 class ResumeSectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'resume', 'index', 'type')
     list_filter = ('type',)
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 @admin.register(Education)
 class EducationAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'institution_name', 'field_of_study', 'degree')
     list_filter = ('current',)
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 @admin.register(Experience)
 class ExperienceAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'company_name', 'job_title')
     list_filter = ('employment_type', 'current',)
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 @admin.register(Proficiency)
@@ -35,6 +78,16 @@ class ProficiencyAdmin(admin.ModelAdmin):
     list_display = ('id', 'skill', 'resume_section', 'level')
     search_fields = ('id', 'skill__name')
     list_filter = ('level',)
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
 
 
 @admin.register(Project)
@@ -75,6 +128,16 @@ class ProjectAdmin(admin.ModelAdmin):
         })
     )
 
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)
+
     def display_github_link(self, obj):
         if obj.github_url:
             return format_html('<a href="{}" target="_blank">GitHub Repository</a>', obj.github_url)
@@ -96,7 +159,18 @@ class ProjectAdmin(admin.ModelAdmin):
         js = ('admin/js/admin/RelatedObjectLookups.js',)
 
 
-
 @admin.register(Certification)
 class CertificationAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'name', 'user', 'issuing_organization']
+    search_fields = ['name', 'issuing_organization', 'user__username', 'user__email']
+    list_filter = ['issuing_organization']
+    
+    def delete_queryset(self, request, queryset):
+        """Override to disable thumbnail generation during bulk deletion"""
+        with disable_thumbnail_generation():
+            super().delete_queryset(request, queryset)
+    
+    def delete_model(self, request, obj):
+        """Override to disable thumbnail generation during single object deletion"""
+        with disable_thumbnail_generation():
+            super().delete_model(request, obj)

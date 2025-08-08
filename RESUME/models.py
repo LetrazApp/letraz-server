@@ -35,6 +35,9 @@ class Resume(models.Model):
 
     status = models.CharField(max_length=1, choices=Status.choices, null=True, blank=True, help_text='The status of the job as mentioned in the job posting. (optional)')
     process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True)
+    thumbnail_process = models.ForeignKey(Process, on_delete=models.SET_NULL, blank=True, null=True, 
+                                        related_name='thumbnail_resumes',
+                                        help_text='Current thumbnail generation process')
 
     class Meta:
         constraints = [

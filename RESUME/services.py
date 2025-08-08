@@ -9,12 +9,13 @@ from CORE.models import Process, Country, Skill
 from RESUME.models import Resume, ResumeSection, Experience, Education, Project, Certification, Proficiency
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer
-from RESUME.utils import bulk_call_tailor_resume_for_the_job
+from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
+
 
 
 class TailorResumeCallBackService(generics.GenericService):
@@ -45,6 +46,12 @@ class TailorResumeCallBackService(generics.GenericService):
             raise InvalidArgument(f"Must return a resume object with sections")
         try:
             in_progress_resume: Resume = await in_progress_resume_qs.afirst()
+            
+            # Set a flag to skip thumbnail generation during bulk tailoring
+            # This approach doesn't affect other users' resumes
+            setattr(in_progress_resume, '_skip_thumbnail_generation', True)
+            logger.debug(f"[util id - {util_process_id}] Set thumbnail generation skip flag for resume {in_progress_resume.id}")
+            
             # Deleting all existing Resume section
             await in_progress_resume.resumesection_set.all().adelete()
             user = await User.objects.aget(id=in_progress_resume.user_id)
@@ -131,8 +138,24 @@ class TailorResumeCallBackService(generics.GenericService):
                         await certification.asave()
                     else:
                         pass
+                        
             in_progress_resume.status = Resume.Status.Success.value
+            
+            # Clear the skip flag before saving to ensure normal signal behavior for future updates
+            if hasattr(in_progress_resume, '_skip_thumbnail_generation'):
+                delattr(in_progress_resume, '_skip_thumbnail_generation')
+            
             await in_progress_resume.asave()
+            
+            # Trigger thumbnail generation ONCE after successful resume tailoring
+            try:
+                # Use asyncio.to_thread to run sync function in async context
+                await asyncio.to_thread(generate_resume_thumbnail, in_progress_resume)
+                logger.info(f"[util id - {util_process_id}] Thumbnail generation triggered for tailored resume {in_progress_resume.id}")
+            except Exception as thumb_e:
+                # Don't fail the main process if thumbnail generation fails
+                logger.warning(f"[util id - {util_process_id}] Thumbnail generation failed for resume {in_progress_resume.id}: {thumb_e}")
+                
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'

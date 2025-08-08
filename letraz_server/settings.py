@@ -297,4 +297,9 @@ if UTIL_GRPC_ERROR:
 else:
     startup_logger.info('Connected to gRPC:util.')
 
+# Thumbnail Generation Configuration
+THUMBNAIL_GENERATION_ENABLED = os.environ.get('THUMBNAIL_GENERATION_ENABLED', 'true').lower() == 'true'
+THUMBNAIL_BASE_RESUME_PRIORITY = True  # Base resumes always get priority
+THUMBNAIL_IMPACT_THRESHOLD = float(os.environ.get('THUMBNAIL_IMPACT_THRESHOLD', '0.20'))  # 20% content change threshold
+
 startup_logger.info('Server started.\n')
