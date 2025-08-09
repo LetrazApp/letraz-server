@@ -13,7 +13,12 @@ class AlgoliaIngestionClient:
     def __init__(self, app_id, api_key):
         self.__app_id = app_id
         self.__api_key = api_key
-        self.client = SearchClientSync(app_id, api_key)
+
+        if not app_id or not api_key:
+            logger.warning('Algolia credentials are not provided! Algolia indexing will be disabled.')
+            self.client = None
+        else:
+            self.client = SearchClientSync(app_id, api_key)
 
     # Add record to an index
     def __add_record(self, index_name: str, record: dict):

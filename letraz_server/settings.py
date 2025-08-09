@@ -233,6 +233,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Algolia Configuration
 ALGOLIA_CLIENT = AlgoliaIngestionClient(app_id=os.environ.get('ALGOLIA_APPLICATION_ID'), api_key=os.environ.get('ALGOLIA_API_KEY'))
 
 # Internationalization
