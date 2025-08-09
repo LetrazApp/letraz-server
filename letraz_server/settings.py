@@ -233,7 +233,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-ALGOLIA_CLIENT = AlgoliaIngestionClient(app_id=os.environ.get('ALGOLIA_APPLICATION_ID'), api_key=os.environ.get('ALGOLIA_API_KEY'))
+# Algolia Configuration
+ALGOLIA_APPLICATION_ID = os.environ.get('ALGOLIA_APPLICATION_ID', '')
+ALGOLIA_API_KEY = os.environ.get('ALGOLIA_API_KEY', '')
+if not ALGOLIA_APPLICATION_ID or not ALGOLIA_API_KEY:
+    startup_logger.warning('Algolia credentials are not provided! Algolia indexing will be disabled.')
+
+ALGOLIA_CLIENT = AlgoliaIngestionClient(app_id=ALGOLIA_APPLICATION_ID, api_key=ALGOLIA_API_KEY)
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
