@@ -19,7 +19,7 @@ from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, Educ
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
     CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer
-from RESUME.utils import call_tailor_resume_util_service
+from RESUME.utils import call_tailor_resume_util_service, index_resume_by_id
 from letraz_server import settings
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
@@ -280,6 +280,7 @@ class EducationViewSets(viewsets.GenericViewSet):
         try:
             if education_ser.is_valid():
                 new_education = education_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(EducationFullSerializer(new_education).data, status=status.HTTP_201_CREATED)
             else:
                 if new_resume_section:
@@ -335,6 +336,7 @@ class EducationViewSets(viewsets.GenericViewSet):
             
             if education_ser.is_valid():
                 updated_education = education_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(EducationFullSerializer(updated_education).data)
             else:
                 return ErrorResponse(
@@ -372,6 +374,7 @@ class EducationViewSets(viewsets.GenericViewSet):
             resume_sec = education.resume_section
             education.delete()
             resume_sec.delete()
+            index_resume_by_id(self.resume.id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Education.DoesNotExist:
             return ErrorResponse(
@@ -456,6 +459,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         try:
             if experience_ser.is_valid():
                 new_experience = experience_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(ExperienceFullSerializer(new_experience).data, status=status.HTTP_201_CREATED)
             else:
                 if new_resume_section:
@@ -538,6 +542,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             
             if experience_ser.is_valid():
                 updated_experience = experience_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(ExperienceFullSerializer(updated_experience).data)
             else:
                 return ErrorResponse(
@@ -575,6 +580,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             resume_sec = experience.resume_section
             experience.delete()
             resume_sec.delete()
+            index_resume_by_id(self.resume.id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Experience.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
@@ -652,6 +658,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
         if self.error:
             return self.error
         try:
+            index_resume_by_id(self.resume.id)
             return Response(ProficiencySerializer(self.resume.add_skill(
                 skill_name=request.data.get('name'),
                 skill_category=request.data.get('category'),
@@ -703,6 +710,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                 skill_category=skill_proficiency.skill.category if category == '---' else category,
                 skill_proficiency=skill_proficiency.level if level == '---' else level,
             )
+            index_resume_by_id(self.resume.id)
             return Response(ProficiencySerializer(edited_skill_proficiency).data)
         except ValueError as ve:
             return ErrorResponse(
@@ -735,6 +743,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
             return self.error
         try:
             self.resume.remove_skill(pk)
+            index_resume_by_id(self.resume.id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Experience.DoesNotExist:
             return ErrorResponse(code=ErrorCode.NOT_FOUND, message='Experience not found!',
@@ -856,6 +865,8 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                     for skill_dict in skill_used:
                         new_project.add_skill(skill_name=skill_dict.get('name'),
                                               skill_category=skill_dict.get('category'))
+
+                index_resume_by_id(self.resume.id)
                 return Response(ProjectSerializer(new_project).data, status=HTTPStatus.CREATED)
             else:
                 if new_resume_section:
@@ -919,6 +930,8 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                             continue
                         updated_project.add_skill(skill_name=skill_dict.get('name'),
                                                   skill_category=skill_dict.get('category'))
+
+                index_resume_by_id(self.resume.id)
                 return Response(ProjectSerializer(updated_project).data)
             else:
                 return ErrorResponse(
@@ -966,6 +979,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             parent_resume_section: ResumeSection = existing_project.resume_section
             existing_project.delete()
             parent_resume_section.delete()
+            index_resume_by_id(self.resume.id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ValueError as ve:
             return ErrorResponse(
@@ -1081,6 +1095,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(data=payload)
             if certification_ser.is_valid():
                 new_certification: Certification = certification_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(CertificationSerializer(new_certification).data, status=HTTPStatus.CREATED)
             else:
                 if new_resume_section:
@@ -1132,6 +1147,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             certification_ser: CertificationUpsertSerializer = CertificationUpsertSerializer(existing_certification, data=payload, partial=True)
             if certification_ser.is_valid():
                 updated_certification: Certification = certification_ser.save()
+                index_resume_by_id(self.resume.id)
                 return Response(CertificationSerializer(updated_certification).data)
             else:
                 return ErrorResponse(
@@ -1179,6 +1195,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             parent_resume_section: ResumeSection = existing_certification.resume_section
             existing_certification.delete()
             parent_resume_section.delete()
+            index_resume_by_id(self.resume.id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ValueError as ve:
             return ErrorResponse(

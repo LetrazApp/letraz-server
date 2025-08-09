@@ -16,6 +16,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 import sentry_sdk
+
+from letraz_server.conf.algolia import AlgoliaIngestionClient
 from letraz_server.conf.loggerConfig import LoggingConfig
 from letraz_server.contrib.settings_logger import get_settings_logger
 from django.core.management.utils import get_random_secret_key
@@ -231,9 +233,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Algolia Configuration
+ALGOLIA_CLIENT = AlgoliaIngestionClient(app_id=os.environ.get('ALGOLIA_APPLICATION_ID'), api_key=os.environ.get('ALGOLIA_API_KEY'))
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Kolkata'

@@ -10,7 +10,7 @@ from RESUME.models import Resume, ResumeSection, Experience, Education, Project,
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer, \
     GenerateScreenshotCallBackResponseSerializer, GenerateScreenshotCallBackRequestProtoSerializer
-from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail
+from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail, index_resume_by_id
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
@@ -147,7 +147,8 @@ class TailorResumeCallBackService(generics.GenericService):
                 delattr(in_progress_resume, '_skip_thumbnail_generation')
             
             await in_progress_resume.asave()
-            
+            await asyncio.to_thread(index_resume_by_id, in_progress_resume.id)
+
             # Trigger thumbnail generation ONCE after successful resume tailoring
             try:
                 # Use asyncio.to_thread to run sync function in async context
@@ -156,7 +157,53 @@ class TailorResumeCallBackService(generics.GenericService):
             except Exception as thumb_e:
                 # Don't fail the main process if thumbnail generation fails
                 logger.warning(f"[util id - {util_process_id}] Thumbnail generation failed for resume {in_progress_resume.id}: {thumb_e}")
-                
+
+        except Exception as e:
+            process.status = Process.ProcessStatus.Failed.value
+            error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
+            logger.exception(error_msg)
+            process.status_details = error_msg[:249]
+            await process.asave()
+            raise GRPCException(str(e))
+        return ScrapeJobResponseSerializer("OK").message
+
+
+
+class GenerateScreenshotCallBackService(generics.GenericService):
+
+    @grpc_action(
+        request=GenerateScreenshotCallBackRequestProtoSerializer,
+        response=GenerateScreenshotCallBackResponseSerializer,  # Empty response
+    )
+    async def GenerateScreenshotCallBack(self, request, context):
+        util_process_id = str(request.processId)
+        logger.debug(f"[util id - {util_process_id}] [method: GenerateScreenshotCallBack] --->Request: \n{MessageToJson(request)}")
+
+        # Your implementation here
+        process_qs = Process.objects.filter(util_id=request.processId)
+        if not await process_qs.aexists():
+            raise NotFound(f"No process found with that util process id: {request.processId}")
+        process = await process_qs.afirst()
+        thumbnail_in_progress_resume_qs = Resume.objects.filter(thumbnail_process=process)
+        if not await thumbnail_in_progress_resume_qs.aexists():
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"No resume found for the process: {process.id}"
+            await process.asave()
+            raise NotFound(f"No resume found for the process: {process.id}")
+        if not request.data or not request.data.screenshot_url :
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"Must return a data object with screenshot_url in the response"
+            await process.asave()
+            raise InvalidArgument(f"Must return a data object with screenshot_url in the response")
+        try:
+            thumbnail_in_progress_resume: Resume = await thumbnail_in_progress_resume_qs.afirst()
+            request_data = MessageToDict(request).get("data")
+            thumbnail_in_progress_resume.thumbnail = request_data.get("screenshotUrl")
+            await thumbnail_in_progress_resume.asave()
+            process.status = Process.ProcessStatus.Success.value
+            process.status_details = f"Screenshot URL generated"[:249]
+            await process.asave()
+            await asyncio.to_thread(index_resume_by_id, thumbnail_in_progress_resume.id)
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
@@ -210,6 +257,3 @@ class GenerateScreenshotCallBackService(generics.GenericService):
             await process.asave()
             raise GRPCException(str(e))
         return ScrapeJobResponseSerializer("OK").message
-
-
-
