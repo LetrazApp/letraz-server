@@ -40,6 +40,24 @@ class BaseResumeFullSerializer(serializers.ModelSerializer):
         return ResumeSectionFullSerializer(resume.resumesection_set.order_by('index'), many=True).data
 
 
+class BaseResumeUtilSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    sections = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Resume
+        fields = ('id', 'base', 'user', 'sections')
+        read_only_fields = ['id']
+
+    @staticmethod
+    def get_user(resume: Resume):
+        return UserSerializer(resume.user).data
+
+    @staticmethod
+    def get_sections(resume: Resume):
+        return ResumeSectionFullSerializer(resume.resumesection_set.order_by('index'), many=True).data
+
+
 class ResumeFullSerializer(BaseResumeFullSerializer):
     job = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
@@ -253,7 +271,6 @@ class ProjectSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     skills_used = SkillSerializer(many=True)
     resume_section = serializers.SerializerMethodField()
-    resume_section = ResumeSectionShortSerializer()
 
     class Meta:
         model = Project
