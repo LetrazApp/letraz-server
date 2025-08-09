@@ -11,7 +11,7 @@ from RESUME.algolia_serializer import AlgoliaIndexResumeSerializer
 from RESUME.models import Resume
 from django.contrib.auth.models import User as AuthUser
 
-from RESUME.serializers import BaseResumeFullSerializer
+from RESUME.serializers import BaseResumeFullSerializer, BaseResumeUtilSerializer
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc, letraz_utils_pb2
 from google.protobuf.json_format import MessageToDict
 
@@ -47,7 +47,7 @@ def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None)
     try:
         base_resume = target_resume.user.resume_set.get(base=True)
         resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
-        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeFullSerializer(base_resume, many=False).data,
+        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeUtilSerializer(base_resume, many=False).data,
                                                    job=JobSerializer(job, many=False).data,
                                                    resume_id=target_resume.id)
         res = MessageToDict(resume_service.TailorResume(req))
