@@ -1,10 +1,16 @@
+import json
 import logging
+import sys
+from datetime import datetime
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from PROFILE.models import User
+from .algolia_serializer import AlgoliaIndexResumeSerializer
 from .models import Resume, ResumeSection, Education, Experience, Project, Certification
+from .serializers import ResumeFullSerializer
 from .utils import should_generate_thumbnail, generate_resume_thumbnail
-from letraz_server.settings import PROJECT_NAME
+from letraz_server.settings import PROJECT_NAME, ALGOLIA_CLIENT
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -205,8 +211,12 @@ def handle_certification_delete(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Resume)
-def handle_resume_change(sender, instance, created, **kwargs):
+def handle_resume_change(sender, instance: Resume, created, **kwargs):
     """Trigger thumbnail generation when resume is created or significantly modified"""
+    if instance.status in [Resume.Status.Success.value, None]:
+        data = AlgoliaIndexResumeSerializer(instance).data
+        print('==========>', sys.getsizeof(json.dumps(data).encode('utf-8')))
+        ALGOLIA_CLIENT.add_resume(data)
     if created and instance.base:
         # New base resume created - generate thumbnail immediately
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')
