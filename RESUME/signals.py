@@ -213,10 +213,6 @@ def handle_certification_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Resume)
 def handle_resume_change(sender, instance: Resume, created, **kwargs):
     """Trigger thumbnail generation when resume is created or significantly modified"""
-    if instance.status in [Resume.Status.Success.value, None]:
-        data = AlgoliaIndexResumeSerializer(instance).data
-        print('==========>', sys.getsizeof(json.dumps(data).encode('utf-8')))
-        ALGOLIA_CLIENT.add_resume(data)
     if created and instance.base:
         # New base resume created - generate thumbnail immediately
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')

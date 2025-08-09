@@ -21,7 +21,7 @@ class AlgoliaIngestionClient:
             raise TypeError('Record must be a dict!')
         try:
             self.client.save_object(index_name=index_name, body=record)
-            logger.debug(f'Indexing {index_name}: \n{record}')
+            logger.debug(f'Indexing {index_name}: {record.get('objectID')} ->\n{record}')
         except Exception as e:
             logger.exception(f'ALGOLIA INDEXING FAILED : {e}')
 

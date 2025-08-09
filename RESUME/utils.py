@@ -7,6 +7,7 @@ from django.core.cache import cache
 from CORE.models import Process
 from JOB.models import Job
 from JOB.serializers import JobSerializer
+from RESUME.algolia_serializer import AlgoliaIndexResumeSerializer
 from RESUME.models import Resume
 from django.contrib.auth.models import User as AuthUser
 
@@ -16,7 +17,7 @@ from google.protobuf.json_format import MessageToDict
 
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
-from letraz_server.settings import PROJECT_NAME
+from letraz_server.settings import PROJECT_NAME, ALGOLIA_CLIENT
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -212,3 +213,12 @@ def generate_resume_thumbnail(resume):
     finally:
         # Always clear the cache after completion (success or failure)
         cache.delete(cache_key)
+
+def index_resume_by_id(resume_id: str):
+    resume_qs = Resume.objects.filter(pk=resume_id)
+    if not resume_qs.exists():
+        logger.warning(f'Resume {resume_id} no longer exists, skipping indexing')
+    else:
+        resume = resume_qs.first()
+        data = AlgoliaIndexResumeSerializer(resume).data
+        ALGOLIA_CLIENT.add_resume(data)
