@@ -215,3 +215,45 @@ class GenerateScreenshotCallBackService(generics.GenericService):
 
 
 
+class GenerateScreenshotCallBackService(generics.GenericService):
+
+    @grpc_action(
+        request=GenerateScreenshotCallBackRequestProtoSerializer,
+        response=GenerateScreenshotCallBackResponseSerializer,  # Empty response
+    )
+    async def GenerateScreenshotCallBack(self, request, context):
+        util_process_id = str(request.processId)
+        logger.debug(f"[util id - {util_process_id}] [method: GenerateScreenshotCallBack] --->Request: \n{MessageToJson(request)}")
+
+        # Your implementation here
+        process_qs = Process.objects.filter(util_id=request.processId)
+        if not await process_qs.aexists():
+            raise NotFound(f"No process found with that util process id: {request.processId}")
+        process = await process_qs.afirst()
+        thumbnail_in_progress_resume_qs = Resume.objects.filter(thumbnail_process=process)
+        if not await thumbnail_in_progress_resume_qs.aexists():
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"No resume found for the process: {process.id}"
+            await process.asave()
+            raise NotFound(f"No resume found for the process: {process.id}")
+        if not request.data or not request.data.screenshot_url :
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f"Must return a data object with screenshot_url in the response"
+            await process.asave()
+            raise InvalidArgument(f"Must return a data object with screenshot_url in the response")
+        try:
+            thumbnail_in_progress_resume: Resume = await thumbnail_in_progress_resume_qs.afirst()
+            request_data = MessageToDict(request).get("data")
+            thumbnail_in_progress_resume.thumbnail = request_data.get("screenshotUrl")
+            await thumbnail_in_progress_resume.asave()
+            process.status = Process.ProcessStatus.Success.value
+            process.status_details = f"Screenshot URL generated"[:249]
+            await process.asave()
+        except Exception as e:
+            process.status = Process.ProcessStatus.Failed.value
+            error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
+            logger.exception(error_msg)
+            process.status_details = error_msg[:249]
+            await process.asave()
+            raise GRPCException(str(e))
+        return ScrapeJobResponseSerializer("OK").message
