@@ -19,7 +19,7 @@ from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, Educ
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
     CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer
-from RESUME.utils import call_tailor_resume_util_service, index_resume_by_id
+from RESUME.utils import call_tailor_resume_util_service, index_resume_by_id, disable_thumbnail_generation, generate_resume_thumbnail
 from letraz_server import settings
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
@@ -148,20 +148,25 @@ class ResumeViewSets(viewsets.GenericViewSet):
             with transaction.atomic():
                 # Create a mapping of section ID to section object
                 section_map = {str(section.id): section for section in existing_sections}
-                
-                # Two-step process to avoid unique constraint violation:
-                # Step 1: Set all sections to temporary negative indices to avoid conflicts
-                for temp_index, section_id in enumerate(section_ids):
-                    section = section_map[str(section_id)]
-                    section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
-                    section.save()
-                
-                # Step 2: Set all sections to their final indices
-                for new_index, section_id in enumerate(section_ids):
-                    section = section_map[str(section_id)]
-                    section.index = new_index
-                    section.save()
-            
+
+                # Temporarily disable thumbnail generation signals during bulk updates
+                with disable_thumbnail_generation():
+                    # Two-step process to avoid unique constraint violation:
+                    # Step 1: Set all sections to temporary negative indices to avoid conflicts
+                    for temp_index, section_id in enumerate(section_ids):
+                        section = section_map[str(section_id)]
+                        section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
+                        section.save()
+
+                    # Step 2: Set all sections to their final indices
+                    for new_index, section_id in enumerate(section_ids):
+                        section = section_map[str(section_id)]
+                        section.index = new_index
+                        section.save()
+
+            # Trigger a single thumbnail generation after reordering completes
+            generate_resume_thumbnail(resume)
+
             # Return the updated resume
             return Response(ResumeFullSerializer(resume).data)
             
