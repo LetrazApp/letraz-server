@@ -1231,7 +1231,7 @@ def tailor_resume(request):
         if not target:
             return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='"target" is required in body!').response
         if re.match(url_pattern, target):
-            sanitized_url = str(target).strip().split('?')[0].rstrip('/')
+            sanitized_url = str(target).strip().rstrip('/')
 
             sanitized_url_job_qs = Job.objects.filter(job_url=sanitized_url)
             if sanitized_url_job_qs.exists():
