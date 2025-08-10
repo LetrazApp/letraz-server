@@ -1236,9 +1236,11 @@ def tailor_resume(request):
             sanitized_url_job_qs = Job.objects.filter(job_url=sanitized_url)
             if sanitized_url_job_qs.exists():
                 job = sanitized_url_job_qs.first()
-                if job.process:
+                # Only unavailable if the job scraping is not completed successfully
+                if job.status != Job.Status.Success:
                     return ErrorResponse(code=ErrorCode.UNAVAILABLE, message='This service is temporarily unavailable please try after some time', status_code=503).response
-                job_resume_qs = Resume.objects.filter(job=job)
+                # If a resume exists for THIS user and this job, return it; otherwise create a new one for this user
+                job_resume_qs = Resume.objects.filter(job=job, user=request.user)
                 if job_resume_qs.exists():
                     return Response(ResumeFullSerializer(job_resume_qs.first(), many=False).data)
                 else:
