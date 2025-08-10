@@ -69,6 +69,9 @@ class DBEnvironmentValidator:
                 'HOST': self.HOST,
                 'PORT': self.PORT,
                 'DISABLE_SERVER_SIDE_CURSORS': str(self.DISABLE_SERVER_SIDE_CURSORS).strip().upper() == 'TRUE',
+                # Set connection max age to 0 to ensure fresh connections in thread pools
+                # This is crucial for SSL environments where stale connections can cause issues
+                'CONN_MAX_AGE': 0,
             }
             if str(self.SSL_MODE_REQUIRED).strip().upper() == 'TRUE':
                 self.config['OPTIONS'] = {

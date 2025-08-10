@@ -3,6 +3,7 @@ import threading
 from contextlib import contextmanager
 from django.conf import settings
 from django.core.cache import cache
+from django.db import connections
 
 from CORE.models import Process
 from JOB.models import Job
@@ -130,6 +131,8 @@ def should_generate_thumbnail(resume, change_type, change_details=None):
 def generate_resume_thumbnail(resume):
     """
     Generate thumbnail for resume, replacing any existing process.
+    This function is designed to be called from thread pool workers
+    and properly handles database connections in SSL environments.
     
     Args:
         resume: Resume instance to generate thumbnail for
@@ -137,12 +140,20 @@ def generate_resume_thumbnail(resume):
     Returns:
         bool: True if generation was initiated successfully, False otherwise
     """
-    # Additional safety check: Ensure the resume still exists in database
-    # This prevents issues during cascade deletions
+    # Ensure fresh database connection for thread pool workers
+    # This is crucial for SSL environments where connections may be stale
+    connections.close_all()
+    
     try:
-        Resume.objects.get(id=resume.id)
-    except Resume.DoesNotExist:
-        logger.debug(f'Resume {resume.id} no longer exists, skipping thumbnail generation')
+        # Additional safety check: Ensure the resume still exists in database
+        # This prevents issues during cascade deletions
+        try:
+            Resume.objects.get(id=resume.id)
+        except Resume.DoesNotExist:
+            logger.debug(f'Resume {resume.id} no longer exists, skipping thumbnail generation')
+            return False
+    except Exception as e:
+        logger.exception(f'Error checking resume existence for thumbnail generation: {e}')
         return False
     
     # Check if thumbnail generation is disabled globally
@@ -213,12 +224,32 @@ def generate_resume_thumbnail(resume):
     finally:
         # Always clear the cache after completion (success or failure)
         cache.delete(cache_key)
+        # Close all connections to prevent stale connection issues
+        connections.close_all()
 
 def index_resume_by_id(resume_id: str):
-    resume_qs = Resume.objects.filter(pk=resume_id)
-    if not resume_qs.exists():
-        logger.warning(f'Resume {resume_id} no longer exists, skipping indexing')
-    else:
-        resume = resume_qs.first()
-        data = AlgoliaIndexResumeSerializer(resume).data
-        ALGOLIA_CLIENT.add_resume(data)
+    """
+    Index a resume by ID. 
+    This function is designed to be called from thread pool workers
+    and properly handles database connections in SSL environments.
+    """
+    # Ensure fresh database connection for thread pool workers
+    # This is crucial for SSL environments where connections may be stale
+    connections.close_all()
+    
+    try:
+        resume_qs = Resume.objects.filter(pk=resume_id)
+        if not resume_qs.exists():
+            logger.warning(f'Resume {resume_id} no longer exists, skipping indexing')
+        else:
+            resume = resume_qs.first()
+            data = AlgoliaIndexResumeSerializer(resume).data
+            ALGOLIA_CLIENT.add_resume(data)
+            logger.debug(f'Successfully indexed resume {resume_id}')
+    except Exception as e:
+        logger.exception(f'Failed to index resume {resume_id}: {e}')
+        # Re-raise the exception to ensure proper error handling upstream
+        raise
+    finally:
+        # Close all connections to prevent stale connection issues
+        connections.close_all()
