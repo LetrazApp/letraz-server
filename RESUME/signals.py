@@ -5,11 +5,12 @@ from datetime import datetime
 
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.db import transaction
 from PROFILE.models import User
 from .algolia_serializer import AlgoliaIndexResumeSerializer
 from .models import Resume, ResumeSection, Education, Experience, Project, Certification
 from .serializers import ResumeFullSerializer
-from .utils import should_generate_thumbnail, generate_resume_thumbnail
+from .utils import should_generate_thumbnail, generate_resume_thumbnail_async
 from letraz_server.settings import PROJECT_NAME, ALGOLIA_CLIENT
 
 __module_name = f'{PROJECT_NAME}.' + __name__
@@ -29,7 +30,7 @@ def handle_resume_section_change(sender, instance, created, **kwargs):
         logger.debug(f'Resume section {instance.id} modified in resume {resume.id}')
     
     if should_generate_thumbnail(resume, change_type):
-        generate_resume_thumbnail(resume)
+        transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
 
 
 @receiver(post_delete, sender=ResumeSection) 
@@ -42,7 +43,7 @@ def handle_resume_section_delete(sender, instance, **kwargs):
         logger.debug(f'Resume section {instance.id} deleted from resume {resume.id}')
         
         if should_generate_thumbnail(resume, 'section_removed'):
-            generate_resume_thumbnail(resume)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
     except Resume.DoesNotExist:
         logger.debug(f'Resume {instance.resume.id} no longer exists, skipping thumbnail generation for deleted section {instance.id}')
 
@@ -55,7 +56,7 @@ def handle_user_profile_change(sender, instance, **kwargs):
         logger.debug(f'User profile change detected for user {instance.id}, checking base resume {base_resume.id}')
         
         if should_generate_thumbnail(base_resume, 'profile_change'):
-            generate_resume_thumbnail(base_resume)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(base_resume))
     except Resume.DoesNotExist:
         logger.debug(f'User {instance.id} does not have a base resume yet')
     except Resume.MultipleObjectsReturned:
@@ -78,7 +79,7 @@ def handle_education_change(sender, instance, created, **kwargs):
         logger.debug(f'Education entry {instance.id} modified in resume {resume.id}')
     
     if should_generate_thumbnail(resume, change_type):
-        generate_resume_thumbnail(resume)
+        transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
 
 
 @receiver(post_delete, sender=Education)
@@ -94,7 +95,7 @@ def handle_education_delete(sender, instance, **kwargs):
         logger.debug(f'Education entry deleted from resume {resume.id}')
         
         if should_generate_thumbnail(resume, 'section_removed'):
-            generate_resume_thumbnail(resume)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
     except Resume.DoesNotExist:
         logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted education {instance.id}')
 
@@ -115,7 +116,7 @@ def handle_experience_change(sender, instance, created, **kwargs):
         logger.debug(f'Experience entry {instance.id} modified in resume {resume.id}')
     
     if should_generate_thumbnail(resume, change_type):
-        generate_resume_thumbnail(resume)
+        transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
 
 
 @receiver(post_delete, sender=Experience)
@@ -131,7 +132,7 @@ def handle_experience_delete(sender, instance, **kwargs):
         logger.debug(f'Experience entry deleted from resume {resume.id}')
         
         if should_generate_thumbnail(resume, 'section_removed'):
-            generate_resume_thumbnail(resume)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
     except Resume.DoesNotExist:
         logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted experience {instance.id}')
 
@@ -152,7 +153,7 @@ def handle_project_change(sender, instance, created, **kwargs):
         logger.debug(f'Project entry {instance.id} modified in resume {resume.id}')
     
     if should_generate_thumbnail(resume, change_type):
-        generate_resume_thumbnail(resume)
+        transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
 
 
 @receiver(post_delete, sender=Project)
@@ -168,7 +169,7 @@ def handle_project_delete(sender, instance, **kwargs):
         logger.debug(f'Project entry deleted from resume {resume.id}')
         
         if should_generate_thumbnail(resume, 'section_removed'):
-            generate_resume_thumbnail(resume)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
     except Resume.DoesNotExist:
         logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted project {instance.id}')
 
@@ -189,7 +190,7 @@ def handle_certification_change(sender, instance, created, **kwargs):
         logger.debug(f'Certification entry {instance.id} modified in resume {resume.id}')
     
     if should_generate_thumbnail(resume, change_type):
-        generate_resume_thumbnail(resume)
+        transaction.on_commit(lambda: generate_resume_thumbnail_async(resume))
 
 
 @receiver(post_delete, sender=Certification)
@@ -205,7 +206,7 @@ def handle_certification_delete(sender, instance, **kwargs):
         logger.debug(f'Certification entry deleted from resume {resume.id}')
         
         if should_generate_thumbnail(resume, 'section_removed'):
-            generate_resume_thumbnail(resume)
+            generate_resume_thumbnail_async(resume)
     except Resume.DoesNotExist:
         logger.debug(f'Resume no longer exists, skipping thumbnail generation for deleted certification {instance.id}')
 
@@ -217,4 +218,4 @@ def handle_resume_change(sender, instance: Resume, created, **kwargs):
         # New base resume created - generate thumbnail immediately
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')
         if should_generate_thumbnail(instance, 'section_added'):
-            generate_resume_thumbnail(instance)
+            transaction.on_commit(lambda: generate_resume_thumbnail_async(instance))

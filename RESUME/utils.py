@@ -1,5 +1,7 @@
 import logging
 import threading
+import atexit
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from django.conf import settings
 from django.core.cache import cache
@@ -25,6 +27,24 @@ logger = logging.getLogger(__module_name)
 
 # Thread-local storage for deletion context
 _local = threading.local()
+
+# Thread pool for background jobs (non-blocking request lifecycle)
+_thumbnail_executor = ThreadPoolExecutor(
+    max_workers=getattr(settings, 'THUMBNAIL_GENERATION_WORKERS', 4)
+)
+
+
+def _shutdown_thumbnail_executor():
+    """Ensure thread pool is shutdown on process exit to avoid dangling threads."""
+    try:
+        # Python 3.9+: cancel_futures supported
+        _thumbnail_executor.shutdown(wait=False, cancel_futures=True)
+    except TypeError:
+        # Older Python fallback
+        _thumbnail_executor.shutdown(wait=False)
+
+
+atexit.register(_shutdown_thumbnail_executor)
 
 
 @contextmanager
@@ -142,7 +162,6 @@ def generate_resume_thumbnail(resume):
     """
     # Ensure fresh database connection for thread pool workers
     # This is crucial for SSL environments where connections may be stale
-    connections.close_all()
     
     try:
         # Additional safety check: Ensure the resume still exists in database
@@ -225,7 +244,46 @@ def generate_resume_thumbnail(resume):
         # Always clear the cache after completion (success or failure)
         cache.delete(cache_key)
         # Close all connections to prevent stale connection issues
-        connections.close_all()
+
+
+def enqueue_thumbnail_generation(resume_id: int) -> bool:
+    """
+    Enqueue thumbnail generation in a background thread so the web request
+    is not blocked. Uses a process-local ThreadPoolExecutor.
+
+    Args:
+        resume_id: Primary key of the resume
+
+    Returns:
+        bool: True if successfully enqueued, False otherwise
+    """
+    if is_thumbnail_generation_disabled():
+        logger.debug(f'Thumbnail generation globally disabled, skipping enqueue for resume {resume_id}')
+        return False
+
+    def _task(target_resume_id: int):
+        try:
+            resume_qs = Resume.objects.filter(id=target_resume_id)
+            if not resume_qs.exists():
+                logger.debug(f'Resume {target_resume_id} no longer exists, skipping background thumbnail generation')
+                return
+            resume_obj = resume_qs.first()
+            generate_resume_thumbnail(resume_obj)
+        except Exception as e:
+            logger.exception(f'Background thumbnail generation failed for resume {target_resume_id}: {e}')
+
+    try:
+        _thumbnail_executor.submit(_task, resume_id)
+        logger.debug(f'Enqueued thumbnail generation for resume {resume_id}')
+        return True
+    except Exception as e:
+        logger.exception(f'Failed to enqueue thumbnail generation for resume {resume_id}: {e}')
+        return False
+
+
+def generate_resume_thumbnail_async(resume: Resume) -> bool:
+    """Convenience wrapper to enqueue by model instance."""
+    return enqueue_thumbnail_generation(resume.id)
 
 def index_resume_by_id(resume_id: str):
     """
@@ -235,7 +293,6 @@ def index_resume_by_id(resume_id: str):
     """
     # Ensure fresh database connection for thread pool workers
     # This is crucial for SSL environments where connections may be stale
-    connections.close_all()
     
     try:
         resume_qs = Resume.objects.filter(pk=resume_id)
@@ -250,6 +307,22 @@ def index_resume_by_id(resume_id: str):
         logger.exception(f'Failed to index resume {resume_id}: {e}')
         # Re-raise the exception to ensure proper error handling upstream
         raise
-    finally:
-        # Close all connections to prevent stale connection issues
-        connections.close_all()
+
+
+def index_resume_by_id_async(resume_id: str) -> bool:
+    """
+    Enqueue Algolia indexing to run in the background so requests are not blocked.
+    """
+    def _task(target_resume_id: str):
+        try:
+            index_resume_by_id(target_resume_id)
+        except Exception as e:
+            logger.exception(f'Background indexing failed for resume {target_resume_id}: {e}')
+
+    try:
+        _thumbnail_executor.submit(_task, resume_id)
+        logger.debug(f'Enqueued indexing for resume {resume_id}')
+        return True
+    except Exception as e:
+        logger.exception(f'Failed to enqueue indexing for resume {resume_id}: {e}')
+        return False
