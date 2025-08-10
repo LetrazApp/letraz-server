@@ -178,18 +178,12 @@ class EducationFullSerializer(serializers.ModelSerializer):
 class EducationUpsertSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
 
-    resume_section = serializers.SerializerMethodField()
-
     class Meta:
         model = Education
         fields = "__all__"
 
     @staticmethod
     def get_id(resume_section: ResumeSection):
-        return str(resume_section.id)
-
-    @staticmethod
-    def get_resume_section(resume_section: ResumeSection):
         return str(resume_section.id)
 
 
