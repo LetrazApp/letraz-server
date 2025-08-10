@@ -152,6 +152,9 @@ def generate_resume_thumbnail(resume):
         except Resume.DoesNotExist:
             logger.debug(f'Resume {resume.id} no longer exists, skipping thumbnail generation')
             return False
+    except Exception as e:
+        logger.exception(f'Error checking resume existence for thumbnail generation: {e}')
+        return False
     
     # Check if thumbnail generation is disabled globally
     if is_thumbnail_generation_disabled():
