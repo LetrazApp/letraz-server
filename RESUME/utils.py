@@ -160,9 +160,6 @@ def generate_resume_thumbnail(resume):
     Returns:
         bool: True if generation was initiated successfully, False otherwise
     """
-    # Ensure fresh database connection for thread pool workers
-    # This is crucial for SSL environments where connections may be stale
-    
     try:
         # Additional safety check: Ensure the resume still exists in database
         # This prevents issues during cascade deletions
@@ -243,7 +240,6 @@ def generate_resume_thumbnail(resume):
     finally:
         # Always clear the cache after completion (success or failure)
         cache.delete(cache_key)
-        # Close all connections to prevent stale connection issues
 
 
 def enqueue_thumbnail_generation(resume_id: int) -> bool:
@@ -263,6 +259,10 @@ def enqueue_thumbnail_generation(resume_id: int) -> bool:
 
     def _task(target_resume_id: int):
         try:
+            # Ensure fresh database connection for thread pool workers
+            # This is crucial for SSL environments where connections may be stale
+            connections.close_all()
+            
             resume_qs = Resume.objects.filter(id=target_resume_id)
             if not resume_qs.exists():
                 logger.debug(f'Resume {target_resume_id} no longer exists, skipping background thumbnail generation')
@@ -271,6 +271,9 @@ def enqueue_thumbnail_generation(resume_id: int) -> bool:
             generate_resume_thumbnail(resume_obj)
         except Exception as e:
             logger.exception(f'Background thumbnail generation failed for resume {target_resume_id}: {e}')
+        finally:
+            # Close all connections to prevent stale connection issues in thread pool workers
+            connections.close_all()
 
     try:
         _thumbnail_executor.submit(_task, resume_id)
@@ -291,9 +294,6 @@ def index_resume_by_id(resume_id: str):
     This function is designed to be called from thread pool workers
     and properly handles database connections in SSL environments.
     """
-    # Ensure fresh database connection for thread pool workers
-    # This is crucial for SSL environments where connections may be stale
-    
     try:
         resume_qs = Resume.objects.filter(pk=resume_id)
         if not resume_qs.exists():
@@ -315,9 +315,16 @@ def index_resume_by_id_async(resume_id: str) -> bool:
     """
     def _task(target_resume_id: str):
         try:
+            # Ensure fresh database connection for thread pool workers
+            # This is crucial for SSL environments where connections may be stale
+            connections.close_all()
+            
             index_resume_by_id(target_resume_id)
         except Exception as e:
             logger.exception(f'Background indexing failed for resume {target_resume_id}: {e}')
+        finally:
+            # Close all connections to prevent stale connection issues in thread pool workers
+            connections.close_all()
 
     try:
         _thumbnail_executor.submit(_task, resume_id)
