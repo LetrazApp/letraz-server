@@ -10,7 +10,7 @@ from RESUME.models import Resume, ResumeSection, Experience, Education, Project,
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer, \
     GenerateScreenshotCallBackResponseSerializer, GenerateScreenshotCallBackRequestProtoSerializer
-from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail, index_resume_by_id
+from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail, index_resume_by_id_async
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
@@ -147,7 +147,7 @@ class TailorResumeCallBackService(generics.GenericService):
                 delattr(in_progress_resume, '_skip_thumbnail_generation')
             
             await in_progress_resume.asave()
-            await asyncio.to_thread(index_resume_by_id, in_progress_resume.id)
+            index_resume_by_id_async(in_progress_resume.id)
 
             # Trigger thumbnail generation ONCE after successful resume tailoring
             try:
@@ -203,7 +203,7 @@ class GenerateScreenshotCallBackService(generics.GenericService):
             process.status = Process.ProcessStatus.Success.value
             process.status_details = f"Screenshot URL generated"[:249]
             await process.asave()
-            await asyncio.to_thread(index_resume_by_id, thumbnail_in_progress_resume.id)
+            index_resume_by_id_async(thumbnail_in_progress_resume.id)
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
