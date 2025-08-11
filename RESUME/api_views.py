@@ -18,7 +18,7 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
-    CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer
+    CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer, BaseResumeUtilSerializer
 from RESUME.utils import (
     call_tailor_resume_util_service,
     index_resume_by_id_async,
@@ -1260,7 +1260,7 @@ def tailor_resume(request):
                     process = Process.objects.create(desc='Tailor Resume Process')
                     try:
                         resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
-                        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeFullSerializer(base_resume, many=False).data, job=JobSerializer(job, many=False).data, resume_id=new_resume_for_job.id)
+                        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeUtilSerializer(base_resume, many=False).data, job=JobSerializer(job, many=False).data, resume_id=new_resume_for_job.id)
                         res = MessageToDict(resume_service.TailorResume(req))
                         logger.debug(f'Tailor Resume Process: \n{res}')
                         process.status = res.get('status')
