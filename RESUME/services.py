@@ -10,7 +10,7 @@ from RESUME.models import Resume, ResumeSection, Experience, Education, Project,
 from JOB.proto_serialzers import ScrapeJobCallbackRequestSerializer, ScrapeJobResponseSerializer
 from RESUME.proto_serializers import TailorResumeCallBackRequestProtoSerializer, TailorResumeCallBackResponseSerializer, \
     GenerateScreenshotCallBackResponseSerializer, GenerateScreenshotCallBackRequestProtoSerializer
-from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail, index_resume_by_id_async
+from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_thumbnail_async, index_resume_by_id_async
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
@@ -151,8 +151,8 @@ class TailorResumeCallBackService(generics.GenericService):
 
             # Trigger thumbnail generation ONCE after successful resume tailoring
             try:
-                # Use asyncio.to_thread to run sync function in async context
-                await asyncio.to_thread(generate_resume_thumbnail, in_progress_resume)
+                # Use proper async pattern with background threading and connection management
+                generate_resume_thumbnail_async(in_progress_resume)
                 logger.info(f"[util id - {util_process_id}] Thumbnail generation triggered for tailored resume {in_progress_resume.id}")
             except Exception as thumb_e:
                 # Don't fail the main process if thumbnail generation fails
