@@ -9,7 +9,7 @@ from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from google.protobuf.json_format import MessageToDict
-from CORE.models import Process
+from CORE.models import Process, Country, Skill
 from CORE.serializers import ErrorSerializer
 from JOB.models import Job
 from JOB.serializers import JobFullSerializer, JobSerializer
@@ -18,7 +18,8 @@ from RESUME.models import Resume, Education, Experience, ResumeSection, Proficie
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
-    CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer, BaseResumeUtilSerializer
+    CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer, BaseResumeUtilSerializer, \
+    ResumeReplaceSerializer
 from RESUME.utils import (
     call_tailor_resume_util_service,
     index_resume_by_id_async,
@@ -89,6 +90,198 @@ class ResumeViewSets(viewsets.GenericViewSet):
             return ErrorResponse(
                 code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
             ).response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
+                             type=str)
+        ],
+        request=ResumeReplaceSerializer,
+        responses={200: ResumeFullSerializer, 400: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
+        summary="Replace resume sections",
+        description="Replace all sections of a resume with the provided ordered list of sections."
+    )
+    def update(self, request, pk=None):
+        self.__set_meta(request)
+        # Resolve resume
+        if pk == 'base':
+            resume, _ = self.authenticated_user.resume_set.get_or_create(base=True)
+        else:
+            resume_qs = self.authenticated_user.resume_set.filter(id=pk)
+            if not resume_qs.exists():
+                return ErrorResponse(
+                    code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': pk}
+                ).response
+            resume = resume_qs.first()
+
+        # Validate payload
+        serializer = ResumeReplaceSerializer(data=request.data)
+        if not serializer.is_valid():
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message='Invalid request data.',
+                details=serializer.errors, extra={'data': request.data}
+            ).response
+
+        sections_payload = serializer.validated_data['sections']
+
+        try:
+            with transaction.atomic():
+                # Avoid spamming thumbnail generation while bulk editing
+                with disable_thumbnail_generation():
+                    # Mark resume to skip any signal-based thumbnail generation
+                    setattr(resume, '_skip_thumbnail_generation', True)
+
+                    # Remove all existing sections and cascades
+                    resume.resumesection_set.all().delete()
+
+                    # Recreate incoming sections preserving order
+                    for index, section in enumerate(sections_payload):
+                        section_type = section.get('type')
+                        section_data = section.get('data') or {}
+
+                        if section_type == 'Skill':
+                            if section_data.get('skills'):
+                                new_res_sec: ResumeSection = resume.resumesection_set.create(
+                                    index=index, type=ResumeSection.ResumeSectionType.Skill.value
+                                )
+                                for skill_item in section_data.get('skills'):
+                                    skill_info = (skill_item or {}).get('skill') or {}
+                                    skill_name = skill_info.get('name')
+                                    skill_category = skill_info.get('category')
+                                    if not skill_name:
+                                        continue
+                                    target_skill, _ = Skill.objects.get_or_create(
+                                        name=skill_name, category=skill_category
+                                    )
+                                    target_proficiency, _ = new_res_sec.proficiency_set.get_or_create(
+                                        skill=target_skill
+                                    )
+                                    skill_level = (skill_item or {}).get('level')
+                                    if skill_level and str(skill_level) in Proficiency.Level.values:
+                                        target_proficiency.level = skill_level
+                                    target_proficiency.save()
+
+                        elif section_type == 'Experience':
+                            new_res_sec: ResumeSection = resume.resumesection_set.create(
+                                index=index, type=ResumeSection.ResumeSectionType.Experience.value
+                            )
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = new_res_sec.id
+                            experience_ser = ExperienceUpsertSerializer(data=payload)
+                            if experience_ser.is_valid():
+                                experience_ser.save()
+                            else:
+                                # cleanup the created section before failing
+                                new_res_sec.delete()
+                                return ErrorResponse(
+                                    code=ErrorCode.INVALID_REQUEST,
+                                    message='Invalid Experience data provided.',
+                                    details=experience_ser.errors,
+                                    extra={'data': section_data}
+                                ).response
+
+                        elif section_type == 'Education':
+                            new_res_sec: ResumeSection = resume.resumesection_set.create(
+                                index=index, type=ResumeSection.ResumeSectionType.Education.value
+                            )
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = new_res_sec.id
+                            education_ser = EducationUpsertSerializer(data=payload)
+                            if education_ser.is_valid():
+                                education_ser.save()
+                            else:
+                                new_res_sec.delete()
+                                return ErrorResponse(
+                                    code=ErrorCode.INVALID_REQUEST,
+                                    message='Invalid Education data provided.',
+                                    details=education_ser.errors,
+                                    extra={'data': section_data}
+                                ).response
+
+                        elif section_type == 'Project':
+                            new_res_sec: ResumeSection = resume.resumesection_set.create(
+                                index=index, type=ResumeSection.ResumeSectionType.Project.value
+                            )
+                            payload = dict(section_data)
+                            skills_used = payload.get('skills_used')
+                            if 'skills_used' in payload:
+                                del payload['skills_used']
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = new_res_sec.id
+                            project_ser = ProjectUpsertSerializer(data=payload)
+                            if project_ser.is_valid():
+                                new_project: Project = project_ser.save()
+                                # Align with other endpoints: add skills via model helper
+                                if isinstance(skills_used, list):
+                                    for sk in skills_used:
+                                        if not sk:
+                                            continue
+                                        sk_name = sk.get('name')
+                                        sk_cat = sk.get('category')
+                                        if not sk_name:
+                                            continue
+                                        new_project.add_skill(skill_name=sk_name, skill_category=sk_cat)
+                            else:
+                                new_res_sec.delete()
+                                return ErrorResponse(
+                                    code=ErrorCode.INVALID_REQUEST,
+                                    message='Invalid Project data provided.',
+                                    details=project_ser.errors,
+                                    extra={'data': section_data}
+                                ).response
+
+                        elif section_type == 'Certification':
+                            new_res_sec: ResumeSection = resume.resumesection_set.create(
+                                index=index, type=ResumeSection.ResumeSectionType.Certification.value
+                            )
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = new_res_sec.id
+                            cert_ser = CertificationUpsertSerializer(data=payload)
+                            if cert_ser.is_valid():
+                                cert_ser.save()
+                            else:
+                                new_res_sec.delete()
+                                return ErrorResponse(
+                                    code=ErrorCode.INVALID_REQUEST,
+                                    message='Invalid Certification data provided.',
+                                    details=cert_ser.errors,
+                                    extra={'data': section_data}
+                                ).response
+                        else:
+                            # Unknown section types are ignored to keep robustness
+                            continue
+
+                    # Clean skip flag before leaving transaction
+                    if hasattr(resume, '_skip_thumbnail_generation'):
+                        delattr(resume, '_skip_thumbnail_generation')
+
+            # Kick off background jobs after successful commit
+            index_resume_by_id_async(resume.id)
+            generate_resume_thumbnail_async(resume)
+
+            return Response(ResumeFullSerializer(resume).data)
+
+        except ValueError as ve:
+            error_response = ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST,
+                message=str(ve),
+                status_code=status.HTTP_400_BAD_REQUEST,
+                details={'data': request.data}
+            )
+            logger.exception(f"{error_response.uuid} -> Invalid request while replacing resume: {ve}")
+            return error_response.response
+        except Exception as e:
+            error_response = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR,
+                message='Unexpected error occurred while replacing resume.',
+                details=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f"{error_response.uuid} -> Exception while replacing resume: {e}")
+            return error_response.response
 
     @extend_schema(
         request=SectionRearrangeSerializer,
