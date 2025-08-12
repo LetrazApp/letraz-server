@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import uuid
 from http import HTTPStatus
 from django.db.models import QuerySet
 from django.db import transaction
@@ -134,125 +135,279 @@ class ResumeViewSets(viewsets.GenericViewSet):
                     # Remove all existing sections and cascades
                     resume.resumesection_set.all().delete()
 
-                    # Recreate incoming sections preserving order
+                    # Prepare bulk creation containers
+                    new_sections: list[ResumeSection] = []
+                    # Keep mapping of enumerated index -> created section id for each type as we preserve original indices
+                    experience_payloads: list[dict] = []
+                    education_payloads: list[dict] = []
+                    project_payloads: list[dict] = []
+                    project_skills_used_map: dict[str, list[dict]] = {}
+                    certification_payloads: list[dict] = []
+
+                    # Skills handling
+                    explicit_skill_sections: dict[str, list[dict]] = {}  # section_id -> list of skill items
+                    first_skill_section_id: str | None = None
+                    project_skill_items: list[dict] = []  # list of {'name','category'} from projects
+
+                    # 1) Build all sections (pre-generate UUIDs) and organize payloads
                     for index, section in enumerate(sections_payload):
                         section_type = section.get('type')
                         section_data = section.get('data') or {}
 
                         if section_type == 'Skill':
-                            if section_data.get('skills'):
-                                new_res_sec: ResumeSection = resume.resumesection_set.create(
-                                    index=index, type=ResumeSection.ResumeSectionType.Skill.value
-                                )
-                                for skill_item in section_data.get('skills'):
-                                    skill_info = (skill_item or {}).get('skill') or {}
-                                    skill_name = skill_info.get('name')
-                                    skill_category = skill_info.get('category')
-                                    if not skill_name:
-                                        continue
-                                    target_skill, _ = Skill.objects.get_or_create(
-                                        name=skill_name, category=skill_category
-                                    )
-                                    target_proficiency, _ = new_res_sec.proficiency_set.get_or_create(
-                                        skill=target_skill
-                                    )
-                                    skill_level = (skill_item or {}).get('level')
-                                    if skill_level and str(skill_level) in Proficiency.Level.values:
-                                        target_proficiency.level = skill_level
-                                    target_proficiency.save()
-
-                        elif section_type == 'Experience':
-                            new_res_sec: ResumeSection = resume.resumesection_set.create(
-                                index=index, type=ResumeSection.ResumeSectionType.Experience.value
-                            )
-                            payload = dict(section_data)
-                            payload['user'] = self.authenticated_user.id
-                            payload['resume_section'] = new_res_sec.id
-                            experience_ser = ExperienceUpsertSerializer(data=payload)
-                            if experience_ser.is_valid():
-                                experience_ser.save()
-                            else:
-                                # cleanup the created section before failing
-                                new_res_sec.delete()
-                                return ErrorResponse(
-                                    code=ErrorCode.INVALID_REQUEST,
-                                    message='Invalid Experience data provided.',
-                                    details=experience_ser.errors,
-                                    extra={'data': section_data}
-                                ).response
-
-                        elif section_type == 'Education':
-                            new_res_sec: ResumeSection = resume.resumesection_set.create(
-                                index=index, type=ResumeSection.ResumeSectionType.Education.value
-                            )
-                            payload = dict(section_data)
-                            payload['user'] = self.authenticated_user.id
-                            payload['resume_section'] = new_res_sec.id
-                            education_ser = EducationUpsertSerializer(data=payload)
-                            if education_ser.is_valid():
-                                education_ser.save()
-                            else:
-                                new_res_sec.delete()
-                                return ErrorResponse(
-                                    code=ErrorCode.INVALID_REQUEST,
-                                    message='Invalid Education data provided.',
-                                    details=education_ser.errors,
-                                    extra={'data': section_data}
-                                ).response
-
-                        elif section_type == 'Project':
-                            new_res_sec: ResumeSection = resume.resumesection_set.create(
-                                index=index, type=ResumeSection.ResumeSectionType.Project.value
-                            )
-                            payload = dict(section_data)
-                            skills_used = payload.get('skills_used')
-                            if 'skills_used' in payload:
-                                del payload['skills_used']
-                            payload['user'] = self.authenticated_user.id
-                            payload['resume_section'] = new_res_sec.id
-                            project_ser = ProjectUpsertSerializer(data=payload)
-                            if project_ser.is_valid():
-                                new_project: Project = project_ser.save()
-                                # Align with other endpoints: add skills via model helper
-                                if isinstance(skills_used, list):
-                                    for sk in skills_used:
-                                        if not sk:
-                                            continue
-                                        sk_name = sk.get('name')
-                                        sk_cat = sk.get('category')
-                                        if not sk_name:
-                                            continue
-                                        new_project.add_skill(skill_name=sk_name, skill_category=sk_cat)
-                            else:
-                                new_res_sec.delete()
-                                return ErrorResponse(
-                                    code=ErrorCode.INVALID_REQUEST,
-                                    message='Invalid Project data provided.',
-                                    details=project_ser.errors,
-                                    extra={'data': section_data}
-                                ).response
-
-                        elif section_type == 'Certification':
-                            new_res_sec: ResumeSection = resume.resumesection_set.create(
-                                index=index, type=ResumeSection.ResumeSectionType.Certification.value
-                            )
-                            payload = dict(section_data)
-                            payload['user'] = self.authenticated_user.id
-                            payload['resume_section'] = new_res_sec.id
-                            cert_ser = CertificationUpsertSerializer(data=payload)
-                            if cert_ser.is_valid():
-                                cert_ser.save()
-                            else:
-                                new_res_sec.delete()
-                                return ErrorResponse(
-                                    code=ErrorCode.INVALID_REQUEST,
-                                    message='Invalid Certification data provided.',
-                                    details=cert_ser.errors,
-                                    extra={'data': section_data}
-                                ).response
-                        else:
-                            # Unknown section types are ignored to keep robustness
+                            skills_list = section_data.get('skills') or []
+                            if not skills_list:
+                                # Skip creating empty Skill sections (matches previous behavior)
+                                continue
+                            sec_id = uuid.uuid4()
+                            sec = ResumeSection(id=sec_id, resume=resume, index=index,
+                                                type=ResumeSection.ResumeSectionType.Skill.value)
+                            new_sections.append(sec)
+                            explicit_skill_sections[str(sec_id)] = skills_list
+                            if not first_skill_section_id:
+                                first_skill_section_id = str(sec_id)
                             continue
+
+                        if section_type == 'Experience':
+                            sec_id = uuid.uuid4()
+                            new_sections.append(ResumeSection(
+                                id=sec_id, resume=resume, index=index,
+                                type=ResumeSection.ResumeSectionType.Experience.value
+                            ))
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = sec_id
+                            experience_payloads.append(payload)
+                            continue
+
+                        if section_type == 'Education':
+                            sec_id = uuid.uuid4()
+                            new_sections.append(ResumeSection(
+                                id=sec_id, resume=resume, index=index,
+                                type=ResumeSection.ResumeSectionType.Education.value
+                            ))
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = sec_id
+                            education_payloads.append(payload)
+                            continue
+
+                        if section_type == 'Project':
+                            sec_id = uuid.uuid4()
+                            new_sections.append(ResumeSection(
+                                id=sec_id, resume=resume, index=index,
+                                type=ResumeSection.ResumeSectionType.Project.value
+                            ))
+                            payload = dict(section_data)
+                            skills_used = payload.pop('skills_used', None)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = sec_id
+                            project_payloads.append(payload)
+                            if isinstance(skills_used, list):
+                                project_skills_used_map[str(sec_id)] = skills_used
+                                # Collect skills for global resolution
+                                for sk in skills_used:
+                                    if sk:
+                                        project_skill_items.append({'name': sk.get('name'), 'category': sk.get('category')})
+                            continue
+
+                        if section_type == 'Certification':
+                            sec_id = uuid.uuid4()
+                            new_sections.append(ResumeSection(
+                                id=sec_id, resume=resume, index=index,
+                                type=ResumeSection.ResumeSectionType.Certification.value
+                            ))
+                            payload = dict(section_data)
+                            payload['user'] = self.authenticated_user.id
+                            payload['resume_section'] = sec_id
+                            certification_payloads.append(payload)
+                            continue
+
+                        # Unknown types: ignore
+
+                    # If there are project skills but no explicit Skill section, create one at the end
+                    if project_skill_items and not first_skill_section_id:
+                        sec_id = uuid.uuid4()
+                        next_index = (max([s.index for s in new_sections], default=-1) + 1)
+                        new_sections.append(ResumeSection(
+                            id=sec_id, resume=resume, index=next_index,
+                            type=ResumeSection.ResumeSectionType.Skill.value
+                        ))
+                        first_skill_section_id = str(sec_id)
+
+                    # 2) Bulk create all sections
+                    if new_sections:
+                        ResumeSection.objects.bulk_create(new_sections, batch_size=500)
+
+                    # 3) Validate and bulk create children
+                    # Experience
+                    if experience_payloads:
+                        exp_ser = ExperienceUpsertSerializer(data=experience_payloads, many=True)
+                        if not exp_ser.is_valid():
+                            return ErrorResponse(
+                                code=ErrorCode.INVALID_REQUEST,
+                                message='Invalid Experience data provided.',
+                                details=exp_ser.errors,
+                                extra={'data': experience_payloads}
+                            ).response
+                        exp_instances = [
+                            Experience(**item) for item in exp_ser.validated_data
+                        ]
+                        if exp_instances:
+                            Experience.objects.bulk_create(exp_instances, batch_size=500)
+
+                    # Education
+                    if education_payloads:
+                        edu_ser = EducationUpsertSerializer(data=education_payloads, many=True)
+                        if not edu_ser.is_valid():
+                            return ErrorResponse(
+                                code=ErrorCode.INVALID_REQUEST,
+                                message='Invalid Education data provided.',
+                                details=edu_ser.errors,
+                                extra={'data': education_payloads}
+                            ).response
+                        edu_instances = [
+                            Education(**item) for item in edu_ser.validated_data
+                        ]
+                        if edu_instances:
+                            Education.objects.bulk_create(edu_instances, batch_size=500)
+
+                    # Project
+                    created_projects_by_section: dict[str, Project] = {}
+                    if project_payloads:
+                        prj_ser = ProjectUpsertSerializer(data=project_payloads, many=True)
+                        if not prj_ser.is_valid():
+                            return ErrorResponse(
+                                code=ErrorCode.INVALID_REQUEST,
+                                message='Invalid Project data provided.',
+                                details=prj_ser.errors,
+                                extra={'data': project_payloads}
+                            ).response
+                        prj_instances: list[Project] = []
+                        for item in prj_ser.validated_data:
+                            # Pre-assign UUID so we can reference for M2M
+                            prj_id = uuid.uuid4()
+                            inst = Project(id=prj_id, **item)
+                            prj_instances.append(inst)
+                        if prj_instances:
+                            Project.objects.bulk_create(prj_instances, batch_size=500)
+                            for inst in prj_instances:
+                                created_projects_by_section[str(inst.resume_section_id)] = inst
+
+                    # Certification
+                    if certification_payloads:
+                        cert_ser = CertificationUpsertSerializer(data=certification_payloads, many=True)
+                        if not cert_ser.is_valid():
+                            return ErrorResponse(
+                                code=ErrorCode.INVALID_REQUEST,
+                                message='Invalid Certification data provided.',
+                                details=cert_ser.errors,
+                                extra={'data': certification_payloads}
+                            ).response
+                        cert_instances = [
+                            Certification(**item) for item in cert_ser.validated_data
+                        ]
+                        if cert_instances:
+                            Certification.objects.bulk_create(cert_instances, batch_size=500)
+
+                    # 4) Resolve Skills once
+                    # Gather unique skills from explicit skill sections and project skills
+                    unique_skill_keys: set[tuple[str | None, str | None]] = set()
+                    # explicit skills
+                    for sec_id, skills_list in explicit_skill_sections.items():
+                        for skill_item in skills_list:
+                            if not skill_item:
+                                continue
+                            sk_info = (skill_item or {}).get('skill') or {}
+                            sk_name = sk_info.get('name')
+                            if not sk_name:
+                                continue
+                            unique_skill_keys.add((sk_name, sk_info.get('category')))
+                    # project skills
+                    for sk in project_skill_items:
+                        if not sk or not sk.get('name'):
+                            continue
+                        unique_skill_keys.add((sk.get('name'), sk.get('category')))
+
+                    skill_lookup: dict[tuple[str | None, str | None], Skill] = {}
+                    if unique_skill_keys:
+                        names = list({n for (n, _c) in unique_skill_keys if n})
+                        cats = list({c for (_n, c) in unique_skill_keys})
+                        existing_skills = Skill.objects.filter(name__in=names, category__in=cats)
+                        for s in existing_skills:
+                            skill_lookup[(s.name, s.category)] = s
+                        missing = [
+                            Skill(name=name, category=cat)
+                            for (name, cat) in unique_skill_keys
+                            if (name, cat) not in skill_lookup
+                        ]
+                        if missing:
+                            Skill.objects.bulk_create(missing, batch_size=500)
+                            for s in missing:
+                                skill_lookup[(s.name, s.category)] = s
+
+                    # 5) Bulk create Proficiencies for explicit Skill sections
+                    prof_instances: list[Proficiency] = []
+                    for sec_id, skills_list in explicit_skill_sections.items():
+                        for skill_item in skills_list:
+                            if not skill_item:
+                                continue
+                            sk_info = (skill_item or {}).get('skill') or {}
+                            sk_name = sk_info.get('name')
+                            if not sk_name:
+                                continue
+                            sk_cat = sk_info.get('category')
+                            level = (skill_item or {}).get('level')
+                            level_val = level if level and str(level) in Proficiency.Level.values else None
+                            skill_obj = skill_lookup.get((sk_name, sk_cat))
+                            if not skill_obj:
+                                continue
+                            prof_instances.append(
+                                Proficiency(resume_section_id=sec_id, skill_id=skill_obj.id, level=level_val)
+                            )
+
+                    # Add project skills to the first skill section (or the implicit one we created)
+                    if first_skill_section_id and project_skill_items:
+                        # Avoid duplicates that may already be added via explicit sections
+                        existing_pairs = set()
+                        for p in prof_instances:
+                            if str(p.resume_section_id) == str(first_skill_section_id):
+                                # For safety capture against duplicates by skill id
+                                existing_pairs.add(p.skill_id)
+                        for sk in project_skill_items:
+                            name = sk.get('name')
+                            if not name:
+                                continue
+                            cat = sk.get('category')
+                            skill_obj = skill_lookup.get((name, cat))
+                            if not skill_obj:
+                                continue
+                            if skill_obj.id in existing_pairs:
+                                continue
+                            prof_instances.append(
+                                Proficiency(resume_section_id=first_skill_section_id, skill_id=skill_obj.id, level=None)
+                            )
+
+                    if prof_instances:
+                        Proficiency.objects.bulk_create(prof_instances, batch_size=500, ignore_conflicts=True)
+
+                    # 6) Bulk create Project.skills_used M2M through rows
+                    if created_projects_by_section and project_skills_used_map:
+                        through_model = Project.skills_used.through
+                        m2m_instances = []
+                        for sec_id, skills_used in project_skills_used_map.items():
+                            prj = created_projects_by_section.get(str(sec_id))
+                            if not prj:
+                                continue
+                            for sk in skills_used:
+                                if not sk or not sk.get('name'):
+                                    continue
+                                skill_obj = skill_lookup.get((sk.get('name'), sk.get('category')))
+                                if not skill_obj:
+                                    continue
+                                m2m_instances.append(through_model(project_id=prj.id, skill_id=skill_obj.id))
+                        if m2m_instances:
+                            through_model.objects.bulk_create(m2m_instances, batch_size=500, ignore_conflicts=True)
 
                     # Clean skip flag before leaving transaction
                     if hasattr(resume, '_skip_thumbnail_generation'):
