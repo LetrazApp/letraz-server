@@ -345,3 +345,27 @@ class SectionRearrangeSerializer(serializers.Serializer):
         if len(value) != len(set(value)):
             raise serializers.ValidationError("Duplicate section IDs are not allowed.")
         return value
+
+
+class ResumeReplaceSectionSerializer(serializers.Serializer):
+    """
+    Incoming section payload for replacing a resume.
+    This is intentionally permissive on the nested data to allow clients
+    to send the same structure produced by tailoring callbacks.
+    """
+    type = serializers.ChoiceField(
+        choices=['Skill', 'Experience', 'Education', 'Project', 'Certification']
+    )
+    data = serializers.DictField(required=False)
+
+
+class ResumeReplaceSerializer(serializers.Serializer):
+    """
+    Serializer for replacing an entire resume's sections in one request.
+    """
+    sections = serializers.ListField(
+        child=ResumeReplaceSectionSerializer(),
+        min_length=1,
+        allow_empty=False,
+        help_text="Ordered list of sections that will fully replace the resume's sections"
+    )
