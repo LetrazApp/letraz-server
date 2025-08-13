@@ -4,6 +4,7 @@ import re
 import uuid
 from http import HTTPStatus
 from django.db.models import QuerySet
+from django.db.models import Q
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets, serializers
@@ -333,7 +334,17 @@ class ResumeViewSets(viewsets.GenericViewSet):
                     if unique_skill_keys:
                         names = list({n for (n, _c) in unique_skill_keys if n})
                         cats = list({c for (_n, c) in unique_skill_keys})
-                        existing_skills = Skill.objects.filter(name__in=names, category__in=cats)
+                        non_null_cats = [c for c in cats if c is not None]
+                        has_null_cat = any(c is None for c in cats)
+
+                        name_q = Q(name__in=names)
+                        cat_q = Q()
+                        if non_null_cats:
+                            cat_q |= Q(category__in=non_null_cats)
+                        if has_null_cat:
+                            cat_q |= Q(category__isnull=True)
+
+                        existing_skills = Skill.objects.filter(name_q & cat_q) if (names and (non_null_cats or has_null_cat)) else Skill.objects.none()
                         for s in existing_skills:
                             skill_lookup[(s.name, s.category)] = s
                         missing = [
