@@ -1,13 +1,18 @@
 import logging
 from rest_framework import serializers
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiTypes, inline_serializer, OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from CORE.models import Waitlist
-from CORE.serializers import WaitlistSerializer, WaitlistUpdateSerializer, WaitlistBulkUpdateSerializer, ErrorSerializer
+from CORE.serializers import (
+    WaitlistSerializer,
+    WaitlistUpdateSerializer,
+    WaitlistBulkUpdateSerializer,
+    ErrorEnvelopeSerializer,
+)
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.contrib.admin_auth import admin_api_key_required
@@ -18,23 +23,24 @@ from letraz_server.settings import PROJECT_NAME
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
+ERROR_ENVELOPE = ErrorEnvelopeSerializer
 
 # Admin Waitlist Management
 @extend_schema(
     methods=['GET'],
     tags=['Admin - Waitlist'],
     auth=[],
-    responses={200: WaitlistSerializer(many=True), 401: ErrorSerializer, 500: ErrorSerializer},
+    responses={200: WaitlistSerializer(many=True), 401: ERROR_ENVELOPE, 400: ERROR_ENVELOPE, 503: ERROR_ENVELOPE},
     summary="[ADMIN] Get all waitlists",
     description="Returns all waitlist entries ordered by waiting number. Requires admin API key authentication.",
     parameters=[
-        {
-            'name': 'x-admin-api-key',
-            'in': 'header',
-            'required': True,
-            'schema': {'type': 'string'},
-            'description': 'Admin API key for authentication'
-        }
+        OpenApiParameter(
+            name='x-admin-api-key',
+            location='header',
+            required=True,
+            type=OpenApiTypes.STR,
+            description='Admin API key for authentication'
+        )
     ]
 )
 @api_view(['GET'])
@@ -61,18 +67,25 @@ def admin_waitlist_list(request):
     request=WaitlistUpdateSerializer,
     responses={
         200: WaitlistSerializer,
-        400: ErrorSerializer,
-        401: ErrorSerializer,
-        404: ErrorSerializer
+        400: ERROR_ENVELOPE,
+        401: ERROR_ENVELOPE,
+        503: ERROR_ENVELOPE
     },
     parameters=[
-        {
-            'name': 'x-admin-api-key',
-            'in': 'header',
-            'required': True,
-            'schema': {'type': 'string'},
-            'description': 'Admin API key for authentication'
-        }
+        OpenApiParameter(
+            name='x-admin-api-key',
+            location='header',
+            required=True,
+            type=OpenApiTypes.STR,
+            description='Admin API key for authentication'
+        ),
+        OpenApiParameter(
+            name='waitlist_id',
+            location='path',
+            required=True,
+            type=OpenApiTypes.UUID,
+            description='The Waitlist ID to update'
+        )
     ]
 )
 @api_view(['POST'])
@@ -154,18 +167,22 @@ def admin_waitlist_update(request, waitlist_id):
     description="Update multiple waitlist entries at once. Currently supports updating the has_access field for multiple users. Requires admin API key authentication.",
     request=WaitlistBulkUpdateSerializer,
     responses={
-        200: WaitlistSerializer(many=True),
-        400: ErrorSerializer,
-        401: ErrorSerializer
+        200: inline_serializer(name='WaitlistBulkUpdateResponse', fields={
+            'updated_count': serializers.IntegerField(),
+            'entries': WaitlistSerializer(many=True)
+        }),
+        400: ERROR_ENVELOPE,
+        401: ERROR_ENVELOPE,
+        503: ERROR_ENVELOPE
     },
     parameters=[
-        {
-            'name': 'x-admin-api-key',
-            'in': 'header',
-            'required': True,
-            'schema': {'type': 'string'},
-            'description': 'Admin API key for authentication'
-        }
+        OpenApiParameter(
+            name='x-admin-api-key',
+            location='header',
+            required=True,
+            type=OpenApiTypes.STR,
+            description='Admin API key for authentication'
+        )
     ]
 )
 @api_view(['POST'])

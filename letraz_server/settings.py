@@ -119,7 +119,8 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 
     'SERVERS': [
-        {'url': 'https://api.letraz.app/api/v1', 'description': 'Production Server'}
+        {'url': 'https://api.letraz.app/api/v1', 'description': 'Production Server'},
+        {'url': 'http://localhost:8000/api/v1', 'description': 'Local Development Server'}
     ],
 
     'PREPROCESSING_HOOKS': [],
@@ -127,18 +128,21 @@ SPECTACULAR_SETTINGS = {
     'ENUM_NAME_OVERRIDES': {},
 
     # Authentication settings
-    # 'SECURITY': [
-    #     {
-    #         'bearer': {
-    #             'type': 'http',
-    #             'scheme': 'bearer',
-    #             'bearerFormat': 'JWT'
-    #         }
-    #     }
-    # ],
-    # 'SECURITY_REQUIREMENTS': [
-    #     {'bearer': []}
-    # ],
+    # Docs note: Authentication for APIs is handled by a session cookie named __session.
+    # We still expose a cookie-based auth scheme in the OpenAPI for client awareness.
+    'SECURITY': [
+        {
+            'cookieAuth': []
+        }
+    ],
+    'SECURITY_SCHEMES': {
+        'cookieAuth': {
+            'type': 'apiKey',
+            'in': 'cookie',
+            'name': '__session',
+            'description': 'Session cookie used for authentication'
+        }
+    },
 
     'TAGS': [
         {'name': 'Core APIs', 'description': 'Core APIs for Letraz Backend'},

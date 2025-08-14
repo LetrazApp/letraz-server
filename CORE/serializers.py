@@ -88,6 +88,16 @@ class ErrorListSerializer(serializers.Serializer):
     )
 
 
+class ErrorEnvelopeSerializer(serializers.Serializer):
+    error = ErrorSerializer()
+
+
+class ErrorListEnvelopeSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    errors = ErrorEnvelopeSerializer(many=True)
+    message = serializers.CharField()
+
+
 class WaitlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Waitlist
