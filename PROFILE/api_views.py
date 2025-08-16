@@ -6,12 +6,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from CORE.serializers import ErrorSerializer
+from CORE.serializers import ErrorEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from letraz_server.settings import PROJECT_NAME
 from .models import User
 from .serializers import UserSerializer, UserUpsertSerializer
+
+ERROR_ENVELOPE = ErrorEnvelopeSerializer
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -19,15 +21,15 @@ logger = logging.getLogger(__module_name)
 @extend_schema(
     methods=['GET'],
     tags=['User'],
-    responses={200: UserSerializer, 500: ErrorSerializer},
-    summary="Get user info",
+    responses={200: UserSerializer, 500: ERROR_ENVELOPE},
+    summary="Get current user info",
 )
 @extend_schema(
     methods=['PATCH'],
     tags=['User'],
-    summary="Add a new user info",
+    summary="Update current user info",
     request=UserUpsertSerializer,
-    responses={201: UserSerializer, 400: ErrorSerializer}
+    responses={200: UserSerializer, 400: ERROR_ENVELOPE, 500: ERROR_ENVELOPE}
 )
 class UserCRUD(APIView):
     """

@@ -1,12 +1,12 @@
 import logging
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiTypes, inline_serializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from CORE.models import Waitlist, Skill
-from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer, SkillSerializer
+from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer, SkillSerializer, ErrorEnvelopeSerializer, ErrorListEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
 from letraz_server import settings
@@ -16,13 +16,14 @@ from letraz_server.contrib.sdks.knock import KnockSDK
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
+ERROR_ENVELOPE = ErrorEnvelopeSerializer
 
 # Health Check
 @extend_schema(
     methods=['GET'],
     tags=['Core APIs'],
     auth=[],
-    responses={200: HealthCheckSerializer, 500: ErrorSerializer},
+    responses={200: HealthCheckSerializer, 503: HealthCheckSerializer},
     summary="Get server health status",
     description="Returns the server health status. The sentry status is also included in the response"
 )
@@ -47,7 +48,7 @@ def health_check(request):
     methods=['GET'],
     tags=['Core APIs'],
     auth=[],
-    responses={500: ErrorSerializer},
+    responses={400: ERROR_ENVELOPE},
     summary="Get sample error",
     description="Returns a sample error response that might occur if an operation fails. Note that the HTTP status would raise an error and that's a normal behavior."
 )
@@ -67,7 +68,7 @@ def error_example(request):
     methods=['GET'],
     tags=['Core APIs'],
     auth=[],
-    responses={500: ErrorListSerializer},
+    responses={400: ErrorListEnvelopeSerializer},
     summary="Get sample error (bulk operations)",
     description="Returns a sample error response that might occur if one or more operations fails from a bulk operation request. Note that the HTTP status would raise an error and that's a normal behavior."
 )
@@ -90,7 +91,7 @@ def error_list_example(request):
     methods=['GET'],
     tags=['Waitlist'],
     auth=[],
-    responses={200: WaitlistSerializer(many=True), 500: ErrorSerializer},
+    responses={200: WaitlistSerializer(many=True), 400: ERROR_ENVELOPE},
     summary="Get all waitlists",
     description="Returns all waitlist entries ordered by waiting number. The waiting number is the order in which the user joined the waitlist."
 )
@@ -103,7 +104,7 @@ def error_list_example(request):
     request=WaitlistSerializer,
     responses={
         201: WaitlistSerializer,
-        400: ErrorSerializer
+        400: ERROR_ENVELOPE
     }
 )
 @api_view(['GET', 'POST'])
@@ -166,7 +167,7 @@ def waitlist_crud(request):
     summary="Get all global skills",
     responses={
         200: SkillSerializer(many=True),
-        400: ErrorSerializer
+        400: ERROR_ENVELOPE
     }
 )
 @api_view(['GET'])
@@ -193,7 +194,7 @@ def get_all_skill(request):
             'type': 'array',
             'items': {'type': 'string'}
         },
-        400: ErrorSerializer
+        400: ERROR_ENVELOPE
     }
 )
 @api_view(['GET'])

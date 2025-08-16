@@ -5,6 +5,14 @@ from PROFILE.serializers import UserSerializer
 from RESUME.models import Resume, ResumeSection, Education, Experience, Proficiency, Project, Certification
 
 
+class TailorRequestSerializer(serializers.Serializer):
+    """
+    Request body for starting the resume tailoring process.
+    Provide either a job URL or a sufficiently long job description.
+    """
+    target = serializers.CharField(help_text='Job URL or long job description to tailor the resume against.')
+
+
 class ResumeShortSerializer(serializers.ModelSerializer):
     job = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()

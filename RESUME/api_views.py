@@ -6,13 +6,13 @@ from http import HTTPStatus
 from django.db.models import QuerySet
 from django.db.models import Q
 from django.db import transaction
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiTypes
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from google.protobuf.json_format import MessageToDict
 from CORE.models import Process, Country, Skill
-from CORE.serializers import ErrorSerializer
+from CORE.serializers import ErrorEnvelopeSerializer
 from JOB.models import Job
 from JOB.serializers import JobFullSerializer, JobSerializer
 from PROFILE.models import User
@@ -21,7 +21,7 @@ from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, Educ
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
     ProjectSerializer, ResumeSkillUpsertSerializer, ProjectUpsertSerializer, CertificationSerializer, \
     CertificationUpsertSerializer, SectionRearrangeSerializer, BaseResumeFullSerializer, BaseResumeUtilSerializer, \
-    ResumeReplaceSerializer
+    ResumeReplaceSerializer, TailorRequestSerializer
 from RESUME.utils import (
     call_tailor_resume_util_service,
     index_resume_by_id_async,
@@ -40,6 +40,7 @@ from RESUME.serializers import ResumeSectionFullSerializer
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
+ERROR_ENVELOPE = ErrorEnvelopeSerializer
 
 # Resume CRUD ViewSets
 @extend_schema(tags=['Resume object'])
@@ -57,7 +58,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
         self.authenticated_user: User = request.user
 
     @extend_schema(
-        responses={200: ResumeShortSerializer(many=True), 500: ErrorSerializer},
+        responses={200: ResumeShortSerializer(many=True), 400: ERROR_ENVELOPE},
         summary="Get all resume"
     )
     def list(self, request):
@@ -69,10 +70,10 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
-                             type=str)
+            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path',
+                             type=OpenApiTypes.STR)
         ],
-        responses={200: ResumeFullSerializer, 500: ErrorSerializer},
+        responses={200: ResumeFullSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Get resume by id"
     )
     def retrieve(self, request, pk):
@@ -95,11 +96,11 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
-                             type=str)
+            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path',
+                             type=OpenApiTypes.STR)
         ],
         request=ResumeReplaceSerializer,
-        responses={200: ResumeFullSerializer, 400: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
+        responses={200: ResumeFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Replace resume sections",
         description="Replace all sections of a resume with the provided ordered list of sections."
     )
@@ -451,7 +452,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=SectionRearrangeSerializer,
-        responses={200: ResumeFullSerializer, 400: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
+        responses={200: ResumeFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Rearrange resume sections",
         description="Rearrange the order of sections in a resume by providing an array of section IDs in the desired order."
     )
@@ -552,8 +553,8 @@ class ResumeViewSets(viewsets.GenericViewSet):
             name='resume_id',
             description='Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here',
             required=True,
-            location=OpenApiParameter.PATH,
-            type=str
+            location='path',
+            type=OpenApiTypes.STR
         )
     ]
 )
@@ -587,7 +588,7 @@ class EducationViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: EducationFullSerializer(many=True), 500: ErrorSerializer},
+        responses={200: EducationFullSerializer(many=True), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all educations",
     )
     def list(self, request, resume_id: str) -> Response:
@@ -603,11 +604,11 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID of the education you want to retrieve',
-                             required=False,
-                             location=OpenApiParameter.PATH, type=str)
+            OpenApiParameter(name='pk', description='Education ID of the education you want to retrieve',
+                             required=True,
+                             location='path', type=OpenApiTypes.STR)
         ],
-        responses={200: EducationFullSerializer, 500: ErrorSerializer},
+        responses={200: EducationFullSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Get education by id",
     )
     def retrieve(self, request, resume_id: str, pk: str) -> Response:
@@ -630,7 +631,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=EducationUpsertSerializer,
-        responses={200: EducationFullSerializer, 500: ErrorSerializer},
+        responses={201: EducationFullSerializer, 400: ERROR_ENVELOPE},
         summary="Add a new education"
     )
     def create(self, request, resume_id: str) -> Response:
@@ -671,11 +672,11 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID of the education you want to update', required=False,
-                             location=OpenApiParameter.PATH, type=str)
+            OpenApiParameter(name='pk', description='Education ID of the education you want to update', required=True,
+                             location='path', type=OpenApiTypes.STR)
         ],
         request=EducationUpsertSerializer,
-        responses={200: EducationFullSerializer, 500: ErrorSerializer},
+        responses={200: EducationFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an education"
     )
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
@@ -722,10 +723,10 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Education ID of the education you want to delete', required=False,
-                             location=OpenApiParameter.PATH, type=str)
+            OpenApiParameter(name='pk', description='Education ID of the education you want to delete', required=True,
+                             location='path', type=OpenApiTypes.STR)
         ],
-        responses={204: None, 500: ErrorSerializer},
+        responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete an education"
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
@@ -756,8 +757,8 @@ class EducationViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=str,
-            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR,
+            location='path',
             description="Resume ID of the resume the education belongs to. If you want to interact with the base educations, just put `base` in here",
             required=True,
         ),
@@ -793,7 +794,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
+        responses={200: ExperienceFullSerializer(many=True), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all experiences",
     )
     def list(self, request, resume_id: str) -> Response:
@@ -809,7 +810,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=ExperienceUpsertSerializer,
-        responses={201: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
+        responses={201: ExperienceFullSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new experience",
     )
     def create(self, request, resume_id: str) -> Response:
@@ -850,11 +851,11 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID of the experience you want to retrieve',
-                             required=True, type=str,
-                             location=OpenApiParameter.PATH)
+            OpenApiParameter(name='pk', description='Experience ID of the experience you want to retrieve',
+                             required=True, type=OpenApiTypes.STR,
+                             location='path')
         ],
-        responses={200: ExperienceFullSerializer or ExperienceFullSerializer(many=True), 500: ErrorSerializer},
+        responses={200: ExperienceFullSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Get experience by id",
     )
     def retrieve(self, request, resume_id: str, pk: str) -> Response:
@@ -877,11 +878,11 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID of the experience you want to update', required=True,
-                             type=str, location=OpenApiParameter.PATH)
+            OpenApiParameter(name='pk', description='Experience ID of the experience you want to update', required=True,
+                             type=OpenApiTypes.STR, location='path')
         ],
         request=ExperienceUpsertSerializer,
-        responses={200: ExperienceFullSerializer, 500: ErrorSerializer},
+        responses={200: ExperienceFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an experience"
     )
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
@@ -928,11 +929,11 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Experience ID of the experience you want to delete', required=True,
-                             type=str,
-                             location=OpenApiParameter.PATH)
+            OpenApiParameter(name='pk', description='Experience ID of the experience you want to delete', required=True,
+                             type=OpenApiTypes.STR,
+                             location='path')
         ],
-        responses={204: None, 500: ErrorSerializer}, summary="Delete an experience"
+        responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE}, summary="Delete an experience"
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
@@ -962,8 +963,8 @@ class ExperienceViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=str,
-            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR,
+            location='path',
             description="Resume ID of the resume the education belongs to. If you want to interact with the base Skill, just put `base` in here",
             required=True,
         ),
@@ -999,7 +1000,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: ProficiencySerializer(many=True), 500: ErrorSerializer},
+        responses={200: ProficiencySerializer(many=True), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all skills of resume",
     )
     def list(self, request, resume_id: str) -> Response:
@@ -1015,7 +1016,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=ResumeSkillUpsertSerializer,
-        responses={201: ProficiencySerializer, 500: ErrorSerializer},
+        responses={200: ProficiencySerializer, 400: ERROR_ENVELOPE},
         summary="Add a new skill",
     )
     def create(self, request, resume_id: str) -> Response:
@@ -1049,11 +1050,11 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+            OpenApiParameter(name='pk', description='ID of the Skill-proficiency you want to update for the resume',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
-        responses={200: ProficiencySerializer, 500: ErrorSerializer},
+        responses={200: ProficiencySerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an existing skill",
     )
     def partial_update(self, request, resume_id: str, pk) -> Response:
@@ -1097,11 +1098,11 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
+            OpenApiParameter(name='pk', description='ID of the Skill-proficiency you want to delete for the resume',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
-        responses={204: None, 500: ErrorSerializer}, summary="Remove skill from resume"
+        responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE}, summary="Remove skill from resume"
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
@@ -1127,7 +1128,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
             return error_response.response
 
     @extend_schema(
-        responses={200: serializers.ListSerializer(child=serializers.CharField()), 500: ErrorSerializer},
+        responses={200: serializers.ListSerializer(child=serializers.CharField()), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all skill category for the resume"
     )
     @action(detail=False, methods=['get'], url_path='categories')
@@ -1156,8 +1157,8 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=str,
-            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR,
+            location='path',
             description="Resume ID of the resume the education belongs to. If you want to interact with the base project, just put `base` in here",
             required=True,
         ),
@@ -1192,7 +1193,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: ProjectSerializer(many=True), 500: ErrorSerializer},
+        responses={200: ProjectSerializer(many=True), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all projects",
     )
     def list(self, request, resume_id: str) -> Response:
@@ -1208,7 +1209,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=ProjectUpsertSerializer,
-        responses={201: ProjectSerializer, 500: ErrorSerializer},
+        responses={201: ProjectSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new project",
     )
     def create(self, request, resume_id: str) -> Response:
@@ -1260,12 +1261,12 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the project that you want to update',
+            OpenApiParameter(name='pk', description='ID of the project that you want to update',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
         request=ProjectUpsertSerializer,
-        responses={200: ProjectSerializer, 500: ErrorSerializer},
+        responses={200: ProjectSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update a project",
     )
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
@@ -1323,12 +1324,12 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the project that you want to delete',
+            OpenApiParameter(name='pk', description='ID of the project that you want to delete',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
         request=ProjectUpsertSerializer,
-        responses={200: None, 500: ErrorSerializer},
+        responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete a project",
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
@@ -1370,8 +1371,8 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
     parameters=[
         OpenApiParameter(
             name="resume_id",
-            type=str,
-            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR,
+            location='path',
             description="Resume ID of the resume the certification belongs to. If you want to interact with the base resume certification, just put `base` in here",
             required=True,
         ),
@@ -1406,7 +1407,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
             self.resume = self.authenticated_user.resume_set.get(id=resume_id)
 
     @extend_schema(
-        responses={200: CertificationSerializer(many=True), 500: ErrorSerializer},
+        responses={200: CertificationSerializer(many=True), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Get all certifications",
     )
     def list(self, request, resume_id: str) -> Response:
@@ -1424,10 +1425,10 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='Resume ID', required=True, location=OpenApiParameter.PATH,
-                             type=str)
+            OpenApiParameter(name='pk', description='Certification ID', required=True, location='path',
+                             type=OpenApiTypes.STR)
         ],
-        responses={200: CertificationSerializer, 500: ErrorSerializer},
+        responses={200: CertificationSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Get certification by id"
     )
     def retrieve(self, request, pk, resume_id: str) -> Response:
@@ -1445,7 +1446,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         request=CertificationUpsertSerializer,
-        responses={201: CertificationSerializer, 500: ErrorSerializer},
+        responses={201: CertificationSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new certification",
     )
     def create(self, request, resume_id: str) -> Response:
@@ -1489,12 +1490,12 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the certification that you want to update',
+            OpenApiParameter(name='pk', description='ID of the certification that you want to update',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
         request=CertificationUpsertSerializer,
-        responses={200: CertificationSerializer, 500: ErrorSerializer},
+        responses={200: CertificationSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update a certification",
     )
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
@@ -1539,12 +1540,12 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='id', description='ID of the certification that you want to delete',
+            OpenApiParameter(name='pk', description='ID of the certification that you want to delete',
                              required=True,
-                             type=str, location=OpenApiParameter.PATH)
+                             type=OpenApiTypes.STR, location='path')
         ],
         request=CertificationUpsertSerializer,
-        responses={200: None, 500: ErrorSerializer},
+        responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete a certification",
     )
     def destroy(self, request, resume_id: str, pk: str) -> Response:
@@ -1584,9 +1585,25 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
     methods=['POST'],
     tags=['Resume object'],
     summary="Start resume tailoring process",
+    request=TailorRequestSerializer,
+    examples=[
+        OpenApiExample(
+            'URL Target',
+            summary='Tailor using a job URL',
+            value={'target': 'https://company.example/jobs/1234-senior-engineer'},
+            request_only=True
+        ),
+        OpenApiExample(
+            'Description Target',
+            summary='Tailor using long job description',
+            value={'target': 'We are seeking a senior backend engineer with Python, Django, PostgreSQL...'},
+            request_only=True
+        ),
+    ],
     responses={
         200: ResumeFullSerializer,
-        400: ErrorSerializer
+        400: ERROR_ENVELOPE,
+        503: ERROR_ENVELOPE
     }
 )
 @api_view(['POST'])

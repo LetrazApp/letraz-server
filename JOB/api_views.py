@@ -1,20 +1,31 @@
 from django.db.models import QuerySet
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from CORE.serializers import ErrorSerializer
+from CORE.serializers import ErrorEnvelopeSerializer
 from JOB.models import Job
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
 from .serializers import JobFullSerializer
 
+ERROR_ENVELOPE = ErrorEnvelopeSerializer
+
 
 @extend_schema(
     methods=['GET'],
     tags=['Job object'],
-    responses={200: JobFullSerializer, 500: ErrorSerializer},
+    parameters=[
+        OpenApiParameter(
+            name='job_id',
+            location='path',
+            required=True,
+            type=OpenApiTypes.STR,
+            description='The Job ID'
+        )
+    ],
+    responses={200: JobFullSerializer, 400: ERROR_ENVELOPE},
     summary="Get job by job ID",
 )
 @api_view(['GET'])
