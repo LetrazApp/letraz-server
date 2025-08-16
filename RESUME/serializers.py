@@ -45,7 +45,20 @@ class BaseResumeFullSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_sections(resume: Resume):
-        return ResumeSectionFullSerializer(resume.resumesection_set.order_by('index'), many=True).data
+        # Optimize queryset to prevent N+1 queries by eagerly loading all related objects
+        sections = resume.resumesection_set.select_related(
+            'education', 
+            'education__country',
+            'experience',
+            'experience__country', 
+            'project',
+            'certification'
+        ).prefetch_related(
+            'proficiency_set__skill__alias',  # For skills in proficiency sections
+            'project__skills_used__alias'     # For skills used in projects
+        ).order_by('index')
+        
+        return ResumeSectionFullSerializer(sections, many=True).data
 
 
 class BaseResumeUtilSerializer(serializers.ModelSerializer):
@@ -63,7 +76,20 @@ class BaseResumeUtilSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_sections(resume: Resume):
-        return ResumeSectionFullSerializer(resume.resumesection_set.order_by('index'), many=True).data
+        # Optimize queryset to prevent N+1 queries by eagerly loading all related objects
+        sections = resume.resumesection_set.select_related(
+            'education', 
+            'education__country',
+            'experience',
+            'experience__country', 
+            'project',
+            'certification'
+        ).prefetch_related(
+            'proficiency_set__skill__alias',  # For skills in proficiency sections
+            'project__skills_used__alias'     # For skills used in projects
+        ).order_by('index')
+        
+        return ResumeSectionFullSerializer(sections, many=True).data
 
 
 class ResumeFullSerializer(BaseResumeFullSerializer):
