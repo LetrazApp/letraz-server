@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12letraz-utils.proto\x12\tletraz.v1\x1a\x1cgoogle/protobuf/struct.proto\"\x81\x01\n\x10ScrapeJobRequest\x12\x10\n\x03url\x18\x01 \x01(\tH\x00\x88\x01\x01\x12\x18\n\x0b\x64\x65scription\x18\x02 \x01(\tH\x01\x88\x01\x01\x12)\n\x07options\x18\x03 \x01(\x0b\x32\x18.letraz.v1.ScrapeOptionsB\x06\n\x04_urlB\x0e\n\x0c_description\"i\n\x11ScrapeJobResponse\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"q\n\nBaseResume\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x62\x61se\x18\x02 \x01(\x08\x12\x1d\n\x04user\x18\x03 \x01(\x0b\x32\x0f.letraz.v1.User\x12*\n\x08sections\x18\x04 \x03(\x0b\x32\x18.letraz.v1.ResumeSection\"\x97\x02\n\x04User\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x12\n\nfirst_name\x18\x03 \x01(\t\x12\x11\n\tlast_name\x18\x04 \x01(\t\x12\r\n\x05\x65mail\x18\x05 \x01(\t\x12\r\n\x05phone\x18\x06 \x01(\t\x12\x0b\n\x03\x64ob\x18\x07 \x01(\t\x12\x13\n\x0bnationality\x18\x08 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\t \x01(\t\x12\x0c\n\x04\x63ity\x18\n \x01(\t\x12\x0e\n\x06postal\x18\x0b \x01(\t\x12\x0f\n\x07\x63ountry\x18\x0c \x01(\t\x12\x0f\n\x07website\x18\r \x01(\t\x12\x14\n\x0cprofile_text\x18\x0e \x01(\t\x12\x12\n\ncreated_at\x18\x0f \x01(\t\x12\x12\n\nupdated_at\x18\x10 \x01(\t\"o\n\rResumeSection\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06resume\x18\x02 \x01(\t\x12\r\n\x05index\x18\x03 \x01(\x05\x12\x0c\n\x04type\x18\x04 \x01(\t\x12%\n\x04\x64\x61ta\x18\x05 \x01(\x0b\x32\x17.google.protobuf.Struct\"q\n\x13TailorResumeRequest\x12*\n\x0b\x62\x61se_resume\x18\x01 \x01(\x0b\x32\x15.letraz.v1.BaseResume\x12\x1b\n\x03job\x18\x02 \x01(\x0b\x32\x0e.letraz.v1.Job\x12\x11\n\tresume_id\x18\x03 \x01(\t\"l\n\x14TailorResumeResponse\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\r\n\x05\x65rror\x18\x05 \x01(\t\",\n\x17ResumeScreenshotRequest\x12\x11\n\tresume_id\x18\x01 \x01(\t\"\x89\x01\n\x18ResumeScreenshotResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\t\x12\x12\n\nprocess_id\x18\x04 \x01(\t\x12\x16\n\x0escreenshot_url\x18\x05 \x01(\t\x12\r\n\x05\x65rror\x18\x06 \x01(\t\"\x14\n\x12HealthCheckRequest\"\xcc\x01\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\t\x12\x16\n\x0euptime_seconds\x18\x04 \x01(\x03\x12:\n\x06\x63hecks\x18\x05 \x03(\x0b\x32*.letraz.v1.HealthCheckResponse.ChecksEntry\x1a-\n\x0b\x43hecksEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xd3\x01\n\x03Job\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07job_url\x18\x03 \x01(\t\x12\x14\n\x0c\x63ompany_name\x18\x04 \x01(\t\x12\x10\n\x08location\x18\x05 \x01(\t\x12!\n\x06salary\x18\x06 \x01(\x0b\x32\x11.letraz.v1.Salary\x12\x14\n\x0crequirements\x18\x07 \x03(\t\x12\x13\n\x0b\x64\x65scription\x18\x08 \x01(\t\x12\x18\n\x10responsibilities\x18\t \x03(\t\x12\x10\n\x08\x62\x65nefits\x18\n \x03(\t\"4\n\x06Salary\x12\x10\n\x08\x63urrency\x18\x01 \x01(\t\x12\x0b\n\x03max\x18\x02 \x01(\x05\x12\x0b\n\x03min\x18\x03 \x01(\x05\"I\n\x0bSalaryRange\x12\x0b\n\x03min\x18\x01 \x01(\x05\x12\x0b\n\x03max\x18\x02 \x01(\x05\x12\x10\n\x08\x63urrency\x18\x03 \x01(\t\x12\x0e\n\x06period\x18\x04 \x01(\t\"\xa7\x03\n\nJobPosting\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07\x63ompany\x18\x03 \x01(\t\x12\x10\n\x08location\x18\x04 \x01(\t\x12\x0e\n\x06remote\x18\x05 \x01(\x08\x12&\n\x06salary\x18\x06 \x01(\x0b\x32\x16.letraz.v1.SalaryRange\x12\x13\n\x0b\x64\x65scription\x18\x07 \x01(\t\x12\x14\n\x0crequirements\x18\x08 \x03(\t\x12\x0e\n\x06skills\x18\t \x03(\t\x12\x10\n\x08\x62\x65nefits\x18\n \x03(\t\x12\x18\n\x10\x65xperience_level\x18\x0b \x01(\t\x12\x10\n\x08job_type\x18\x0c \x01(\t\x12\x13\n\x0bposted_date\x18\r \x01(\t\x12\x17\n\x0f\x61pplication_url\x18\x0e \x01(\t\x12\x35\n\x08metadata\x18\x0f \x03(\x0b\x32#.letraz.v1.JobPosting.MetadataEntry\x12\x14\n\x0cprocessed_at\x18\x10 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"q\n\rScrapeOptions\x12\x0e\n\x06\x65ngine\x18\x01 \x01(\t\x12\x17\n\x0ftimeout_seconds\x18\x02 \x01(\x05\x12\x14\n\x0cllm_provider\x18\x03 \x01(\t\x12\x12\n\nuser_agent\x18\x04 \x01(\t\x12\r\n\x05proxy\x18\x05 \x01(\t2X\n\x0eScraperService\x12\x46\n\tScrapeJob\x12\x1b.letraz.v1.ScrapeJobRequest\x1a\x1c.letraz.v1.ScrapeJobResponse2\xbf\x01\n\rResumeService\x12O\n\x0cTailorResume\x12\x1e.letraz.v1.TailorResumeRequest\x1a\x1f.letraz.v1.TailorResumeResponse\x12]\n\x12GenerateScreenshot\x12\".letraz.v1.ResumeScreenshotRequest\x1a#.letraz.v1.ResumeScreenshotResponse2]\n\rHealthService\x12L\n\x0bHealthCheck\x12\x1d.letraz.v1.HealthCheckRequest\x1a\x1e.letraz.v1.HealthCheckResponseB+Z)letraz-utils/api/proto/letraz/v1;letrazv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12letraz-utils.proto\x12\tletraz.v1\x1a\x1cgoogle/protobuf/struct.proto\"\x81\x01\n\x10ScrapeJobRequest\x12\x10\n\x03url\x18\x01 \x01(\tH\x00\x88\x01\x01\x12\x18\n\x0b\x64\x65scription\x18\x02 \x01(\tH\x01\x88\x01\x01\x12)\n\x07options\x18\x03 \x01(\x0b\x32\x18.letraz.v1.ScrapeOptionsB\x06\n\x04_urlB\x0e\n\x0c_description\"i\n\x11ScrapeJobResponse\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\r\n\x05\x65rror\x18\x05 \x01(\t\"q\n\nBaseResume\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04\x62\x61se\x18\x02 \x01(\x08\x12\x1d\n\x04user\x18\x03 \x01(\x0b\x32\x0f.letraz.v1.User\x12*\n\x08sections\x18\x04 \x03(\x0b\x32\x18.letraz.v1.ResumeSection\"\x97\x02\n\x04User\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x12\n\nfirst_name\x18\x03 \x01(\t\x12\x11\n\tlast_name\x18\x04 \x01(\t\x12\r\n\x05\x65mail\x18\x05 \x01(\t\x12\r\n\x05phone\x18\x06 \x01(\t\x12\x0b\n\x03\x64ob\x18\x07 \x01(\t\x12\x13\n\x0bnationality\x18\x08 \x01(\t\x12\x0f\n\x07\x61\x64\x64ress\x18\t \x01(\t\x12\x0c\n\x04\x63ity\x18\n \x01(\t\x12\x0e\n\x06postal\x18\x0b \x01(\t\x12\x0f\n\x07\x63ountry\x18\x0c \x01(\t\x12\x0f\n\x07website\x18\r \x01(\t\x12\x14\n\x0cprofile_text\x18\x0e \x01(\t\x12\x12\n\ncreated_at\x18\x0f \x01(\t\x12\x12\n\nupdated_at\x18\x10 \x01(\t\"o\n\rResumeSection\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0e\n\x06resume\x18\x02 \x01(\t\x12\r\n\x05index\x18\x03 \x01(\x05\x12\x0c\n\x04type\x18\x04 \x01(\t\x12%\n\x04\x64\x61ta\x18\x05 \x01(\x0b\x32\x17.google.protobuf.Struct\"q\n\x13TailorResumeRequest\x12*\n\x0b\x62\x61se_resume\x18\x01 \x01(\x0b\x32\x15.letraz.v1.BaseResume\x12\x1b\n\x03job\x18\x02 \x01(\x0b\x32\x0e.letraz.v1.Job\x12\x11\n\tresume_id\x18\x03 \x01(\t\"l\n\x14TailorResumeResponse\x12\x11\n\tprocessId\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\t\x12\r\n\x05\x65rror\x18\x05 \x01(\t\",\n\x17ResumeScreenshotRequest\x12\x11\n\tresume_id\x18\x01 \x01(\t\"\x89\x01\n\x18ResumeScreenshotResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\t\x12\x12\n\nprocess_id\x18\x04 \x01(\t\x12\x16\n\x0escreenshot_url\x18\x05 \x01(\t\x12\r\n\x05\x65rror\x18\x06 \x01(\t\"K\n\x13\x45xportResumeRequest\x12%\n\x06resume\x18\x01 \x01(\x0b\x32\x15.letraz.v1.BaseResume\x12\r\n\x05theme\x18\x02 \x01(\t\"\x8f\x01\n\x14\x45xportResumeResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\t\x12\x11\n\tlatex_url\x18\x05 \x01(\t\x12\x0f\n\x07pdf_url\x18\x06 \x01(\t\x12\r\n\x05\x65rror\x18\x07 \x01(\tJ\x04\x08\x04\x10\x05R\nexport_url\"\x14\n\x12HealthCheckRequest\"\xcc\x01\n\x13HealthCheckResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\t\x12\x16\n\x0euptime_seconds\x18\x04 \x01(\x03\x12:\n\x06\x63hecks\x18\x05 \x03(\x0b\x32*.letraz.v1.HealthCheckResponse.ChecksEntry\x1a-\n\x0b\x43hecksEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xd3\x01\n\x03Job\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0f\n\x07job_url\x18\x03 \x01(\t\x12\x14\n\x0c\x63ompany_name\x18\x04 \x01(\t\x12\x10\n\x08location\x18\x05 \x01(\t\x12!\n\x06salary\x18\x06 \x01(\x0b\x32\x11.letraz.v1.Salary\x12\x14\n\x0crequirements\x18\x07 \x03(\t\x12\x13\n\x0b\x64\x65scription\x18\x08 \x01(\t\x12\x18\n\x10responsibilities\x18\t \x03(\t\x12\x10\n\x08\x62\x65nefits\x18\n \x03(\t\"4\n\x06Salary\x12\x10\n\x08\x63urrency\x18\x01 \x01(\t\x12\x0b\n\x03max\x18\x02 \x01(\x05\x12\x0b\n\x03min\x18\x03 \x01(\x05\"q\n\rScrapeOptions\x12\x0e\n\x06\x65ngine\x18\x01 \x01(\t\x12\x17\n\x0ftimeout_seconds\x18\x02 \x01(\x05\x12\x14\n\x0cllm_provider\x18\x03 \x01(\t\x12\x12\n\nuser_agent\x18\x04 \x01(\t\x12\r\n\x05proxy\x18\x05 \x01(\t2X\n\x0eScraperService\x12\x46\n\tScrapeJob\x12\x1b.letraz.v1.ScrapeJobRequest\x1a\x1c.letraz.v1.ScrapeJobResponse2\x90\x02\n\rResumeService\x12O\n\x0cTailorResume\x12\x1e.letraz.v1.TailorResumeRequest\x1a\x1f.letraz.v1.TailorResumeResponse\x12]\n\x12GenerateScreenshot\x12\".letraz.v1.ResumeScreenshotRequest\x1a#.letraz.v1.ResumeScreenshotResponse\x12O\n\x0c\x45xportResume\x12\x1e.letraz.v1.ExportResumeRequest\x1a\x1f.letraz.v1.ExportResumeResponse2]\n\rHealthService\x12L\n\x0bHealthCheck\x12\x1d.letraz.v1.HealthCheckRequest\x1a\x1e.letraz.v1.HealthCheckResponseB+Z)letraz-utils/api/proto/letraz/v1;letrazv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,8 +35,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z)letraz-utils/api/proto/letraz/v1;letrazv1'
   _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._loaded_options = None
   _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._serialized_options = b'8\001'
-  _globals['_JOBPOSTING_METADATAENTRY']._loaded_options = None
-  _globals['_JOBPOSTING_METADATAENTRY']._serialized_options = b'8\001'
   _globals['_SCRAPEJOBREQUEST']._serialized_start=64
   _globals['_SCRAPEJOBREQUEST']._serialized_end=193
   _globals['_SCRAPEJOBRESPONSE']._serialized_start=195
@@ -55,28 +53,26 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RESUMESCREENSHOTREQUEST']._serialized_end=1081
   _globals['_RESUMESCREENSHOTRESPONSE']._serialized_start=1084
   _globals['_RESUMESCREENSHOTRESPONSE']._serialized_end=1221
-  _globals['_HEALTHCHECKREQUEST']._serialized_start=1223
-  _globals['_HEALTHCHECKREQUEST']._serialized_end=1243
-  _globals['_HEALTHCHECKRESPONSE']._serialized_start=1246
-  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1450
-  _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._serialized_start=1405
-  _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._serialized_end=1450
-  _globals['_JOB']._serialized_start=1453
-  _globals['_JOB']._serialized_end=1664
-  _globals['_SALARY']._serialized_start=1666
-  _globals['_SALARY']._serialized_end=1718
-  _globals['_SALARYRANGE']._serialized_start=1720
-  _globals['_SALARYRANGE']._serialized_end=1793
-  _globals['_JOBPOSTING']._serialized_start=1796
-  _globals['_JOBPOSTING']._serialized_end=2219
-  _globals['_JOBPOSTING_METADATAENTRY']._serialized_start=2172
-  _globals['_JOBPOSTING_METADATAENTRY']._serialized_end=2219
-  _globals['_SCRAPEOPTIONS']._serialized_start=2221
-  _globals['_SCRAPEOPTIONS']._serialized_end=2334
-  _globals['_SCRAPERSERVICE']._serialized_start=2336
-  _globals['_SCRAPERSERVICE']._serialized_end=2424
-  _globals['_RESUMESERVICE']._serialized_start=2427
-  _globals['_RESUMESERVICE']._serialized_end=2618
-  _globals['_HEALTHSERVICE']._serialized_start=2620
-  _globals['_HEALTHSERVICE']._serialized_end=2713
+  _globals['_EXPORTRESUMEREQUEST']._serialized_start=1223
+  _globals['_EXPORTRESUMEREQUEST']._serialized_end=1298
+  _globals['_EXPORTRESUMERESPONSE']._serialized_start=1301
+  _globals['_EXPORTRESUMERESPONSE']._serialized_end=1444
+  _globals['_HEALTHCHECKREQUEST']._serialized_start=1446
+  _globals['_HEALTHCHECKREQUEST']._serialized_end=1466
+  _globals['_HEALTHCHECKRESPONSE']._serialized_start=1469
+  _globals['_HEALTHCHECKRESPONSE']._serialized_end=1673
+  _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._serialized_start=1628
+  _globals['_HEALTHCHECKRESPONSE_CHECKSENTRY']._serialized_end=1673
+  _globals['_JOB']._serialized_start=1676
+  _globals['_JOB']._serialized_end=1887
+  _globals['_SALARY']._serialized_start=1889
+  _globals['_SALARY']._serialized_end=1941
+  _globals['_SCRAPEOPTIONS']._serialized_start=1943
+  _globals['_SCRAPEOPTIONS']._serialized_end=2056
+  _globals['_SCRAPERSERVICE']._serialized_start=2058
+  _globals['_SCRAPERSERVICE']._serialized_end=2146
+  _globals['_RESUMESERVICE']._serialized_start=2149
+  _globals['_RESUMESERVICE']._serialized_end=2421
+  _globals['_HEALTHSERVICE']._serialized_start=2423
+  _globals['_HEALTHSERVICE']._serialized_end=2516
 # @@protoc_insertion_point(module_scope)

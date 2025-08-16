@@ -19,6 +19,9 @@ service ResumeService {
   
   // Generate a screenshot of a resume
   rpc GenerateScreenshot(ResumeScreenshotRequest) returns (ResumeScreenshotResponse);
+
+  // Export a resume to LaTeX and upload to object storage
+  rpc ExportResume(ExportResumeRequest) returns (ExportResumeResponse);
 }
 
 service HealthService {
@@ -111,6 +114,26 @@ message ResumeScreenshotResponse {
   string error = 6;           // Error code/type
 }
 
+// ===== EXPORT MESSAGES =====
+
+message ExportResumeRequest {
+  BaseResume resume = 1;   // Complete resume object to export
+  string theme = 2;        // e.g., "DEFAULT_THEME"
+}
+
+message ExportResumeResponse {
+  // Reserve removed field to avoid accidental reuse
+  reserved 4;
+  reserved "export_url";
+
+  string status = 1;         // SUCCESS, FAILURE
+  string message = 2;        // Status message
+  string timestamp = 3;      // ISO timestamp string
+  string latex_url = 5;      // CDN URL of the uploaded .tex file
+  string pdf_url = 6;        // CDN URL of the uploaded .pdf file
+  string error = 7;          // Error code/type (only for failures)
+}
+
 // ===== HEALTH MESSAGES =====
 
 message HealthCheckRequest {
@@ -144,32 +167,6 @@ message Salary {
   string currency = 1;
   int32 max = 2;
   int32 min = 3;
-}
-
-message SalaryRange {
-  int32 min = 1;
-  int32 max = 2;
-  string currency = 3;
-  string period = 4; // hourly, monthly, yearly
-}
-
-message JobPosting {
-  string id = 1;
-  string title = 2;
-  string company = 3;
-  string location = 4;
-  bool remote = 5;
-  SalaryRange salary = 6;
-  string description = 7;
-  repeated string requirements = 8;
-  repeated string skills = 9;
-  repeated string benefits = 10;
-  string experience_level = 11;
-  string job_type = 12;
-  string posted_date = 13;           // ISO timestamp string
-  string application_url = 14;
-  map<string, string> metadata = 15;
-  string processed_at = 16;          // ISO timestamp string
 }
 
 message ScrapeOptions {
