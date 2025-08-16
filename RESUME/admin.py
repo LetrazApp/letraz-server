@@ -28,6 +28,7 @@ class ResumeAdmin(admin.ModelAdmin):
 @admin.register(ResumeSection)
 class ResumeSectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'resume', 'index', 'type')
+    search_fields = ('id', 'resume__id')
     list_filter = ('type',)
     
     def delete_queryset(self, request, queryset):

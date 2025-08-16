@@ -123,6 +123,11 @@ class ResumeServiceStub(object):
                 request_serializer=letraz__utils__pb2.ResumeScreenshotRequest.SerializeToString,
                 response_deserializer=letraz__utils__pb2.ResumeScreenshotResponse.FromString,
                 _registered_method=True)
+        self.ExportResume = channel.unary_unary(
+                '/letraz.v1.ResumeService/ExportResume',
+                request_serializer=letraz__utils__pb2.ExportResumeRequest.SerializeToString,
+                response_deserializer=letraz__utils__pb2.ExportResumeResponse.FromString,
+                _registered_method=True)
 
 
 class ResumeServiceServicer(object):
@@ -142,6 +147,13 @@ class ResumeServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ExportResume(self, request, context):
+        """Export a resume to LaTeX and upload to object storage
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ResumeServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -154,6 +166,11 @@ def add_ResumeServiceServicer_to_server(servicer, server):
                     servicer.GenerateScreenshot,
                     request_deserializer=letraz__utils__pb2.ResumeScreenshotRequest.FromString,
                     response_serializer=letraz__utils__pb2.ResumeScreenshotResponse.SerializeToString,
+            ),
+            'ExportResume': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExportResume,
+                    request_deserializer=letraz__utils__pb2.ExportResumeRequest.FromString,
+                    response_serializer=letraz__utils__pb2.ExportResumeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -210,6 +227,33 @@ class ResumeService(object):
             '/letraz.v1.ResumeService/GenerateScreenshot',
             letraz__utils__pb2.ResumeScreenshotRequest.SerializeToString,
             letraz__utils__pb2.ResumeScreenshotResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExportResume(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/letraz.v1.ResumeService/ExportResume',
+            letraz__utils__pb2.ExportResumeRequest.SerializeToString,
+            letraz__utils__pb2.ExportResumeResponse.FromString,
             options,
             channel_credentials,
             insecure,

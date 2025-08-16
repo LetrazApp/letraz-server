@@ -16,6 +16,7 @@ from CORE.serializers import ErrorEnvelopeSerializer
 from JOB.models import Job
 from JOB.serializers import JobFullSerializer, JobSerializer
 from PROFILE.models import User
+from RESUME.doc_only_serializers import ResumeExportResponse
 from RESUME.models import Resume, Education, Experience, ResumeSection, Proficiency, Project, Certification
 from RESUME.serializers import ResumeShortSerializer, ResumeFullSerializer, EducationFullSerializer, \
     ExperienceFullSerializer, EducationUpsertSerializer, ExperienceUpsertSerializer, ProficiencySerializer, \
@@ -543,6 +544,45 @@ class ResumeViewSets(viewsets.GenericViewSet):
             )
             logger.exception(f'{error_response.uuid} -> Exception while rearranging sections: {e}')
             return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path', type=OpenApiTypes.STR)
+        ],
+        responses={200:ResumeExportResponse, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
+        summary="Export a resume",
+        description = "Exports a resume by its ID and returns the exported resume's PDF and TEX URL from DigitalOcean CDN"
+    )
+    @action(detail=True, methods=['get'], url_path='export')
+    def export_resume(self, request, pk=None):
+        self.__set_meta(request)
+
+        if pk == 'base':
+            base_resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
+            resume_id = base_resume.id
+            is_base_resume = True
+        else:
+            resume_id = pk
+            is_base_resume = False
+
+        logger.debug(f'Request exporting Resume for resume id: {"[BASE]"if is_base_resume else ''}{resume_id}')
+        resume_by_user_and_resume_id_qs = self.authenticated_user.resume_set.filter(id=resume_id)
+        if resume_by_user_and_resume_id_qs.exists():
+            resume: Resume = resume_by_user_and_resume_id_qs.first()
+            resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
+            req = letraz_utils_pb2.ExportResumeRequest(
+                resume=BaseResumeUtilSerializer(resume, many=False).data, theme="DEFAULT_THEME"
+            )
+            logger.debug(f'Calling ExportResume Resume Response for resume id: {"[BASE]"if is_base_resume else ''}{resume_id} -> \n {BaseResumeUtilSerializer(resume, many=False).data}')
+            res = MessageToDict(resume_service.ExportResume(req))
+            logger.debug(f'ExportResume Resume Response: \n{res}')
+            if res.get('status') == 'FAILURE':
+                return ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unknown error occurred!', details=res.get('error'))
+            return Response({"pdf_url": res.get('pdfUrl'), "latex_url": res.get('latexUrl')})
+        else:
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
+            ).response
 
 
 # Education CRUD operations
