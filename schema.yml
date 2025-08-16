@@ -427,6 +427,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: ''
+  /resume/{id}/export/:
+    get:
+      operationId: resume_export_retrieve
+      description: Exports a resume by its ID and returns the exported resume's PDF
+        and TEX URL from DigitalOcean CDN
+      summary: Export a resume
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: pk
+        schema:
+          type: string
+        description: Resume ID
+        required: true
+      tags:
+      - Resume object
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeExportResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
   /resume/{id}/sections/rearrange/:
     put:
       operationId: resume_sections_rearrange_update
@@ -3195,6 +3238,20 @@ components:
       - resume_section
       - updated_at
       - user
+    ResumeExportResponse:
+      type: object
+      properties:
+        pdf_url:
+          type: string
+          format: uuid
+          description: The public CDN URL of the exported PDF file of the resume
+        latex_url:
+          type: string
+          format: uuid
+          description: The public CDN URL of the exported TEX file of the resume
+      required:
+      - latex_url
+      - pdf_url
     ResumeFull:
       type: object
       properties:
