@@ -71,7 +71,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path',
+            OpenApiParameter(name='id', description='Resume ID', required=True, location='path',
                              type=OpenApiTypes.STR)
         ],
         responses={200: ResumeFullSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
@@ -97,7 +97,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path',
+            OpenApiParameter(name='id', description='Resume ID', required=True, location='path',
                              type=OpenApiTypes.STR)
         ],
         request=ResumeReplaceSerializer,
@@ -547,7 +547,59 @@ class ResumeViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Resume ID', required=True, location='path', type=OpenApiTypes.STR)
+            OpenApiParameter(name='id', description='Resume ID', required=True, location='path',
+                             type=OpenApiTypes.STR)
+        ],
+        responses={204: None, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
+        summary="Delete a resume",
+        description="Delete a resume by its ID. Base resume cannot be deleted."
+    )
+    def destroy(self, request, pk=None):
+        """
+        Deletes a resume by its ID. Base resume cannot be deleted.
+        """
+        self.__set_meta(request)
+        
+        # Check if trying to delete base resume
+        if pk == 'base':
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, 
+                message='Base resume cannot be deleted!', 
+                details={'resume': pk}
+            ).response
+        
+        # Get the resume
+        resume_qs = self.authenticated_user.resume_set.filter(id=pk)
+        if not resume_qs.exists():
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': pk}
+            ).response
+        
+        resume = resume_qs.first()
+        
+        # Additional check to prevent deletion of base resume by ID
+        if resume.base:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, 
+                message='Base resume cannot be deleted!', 
+                details={'resume': pk}
+            ).response
+        
+        try:
+            resume.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            error_response = ErrorResponse(
+                code=ErrorCode.INTERNAL_SERVER_ERROR,
+                message='Unexpected error occurred while deleting resume.',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            logger.exception(f'{error_response.uuid} -> Exception while deleting resume: {e}')
+            return error_response.response
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='id', description='Resume ID', required=True, location='path', type=OpenApiTypes.STR)
         ],
         responses={200:ResumeExportResponse, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Export a resume",
@@ -644,7 +696,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Education ID of the education you want to retrieve',
+            OpenApiParameter(name='id', description='Education ID of the education you want to retrieve',
                              required=True,
                              location='path', type=OpenApiTypes.STR)
         ],
@@ -712,7 +764,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Education ID of the education you want to update', required=True,
+            OpenApiParameter(name='id', description='Education ID of the education you want to update', required=True,
                              location='path', type=OpenApiTypes.STR)
         ],
         request=EducationUpsertSerializer,
@@ -763,7 +815,7 @@ class EducationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Education ID of the education you want to delete', required=True,
+            OpenApiParameter(name='id', description='Education ID of the education you want to delete', required=True,
                              location='path', type=OpenApiTypes.STR)
         ],
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
@@ -891,7 +943,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Experience ID of the experience you want to retrieve',
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to retrieve',
                              required=True, type=OpenApiTypes.STR,
                              location='path')
         ],
@@ -918,7 +970,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Experience ID of the experience you want to update', required=True,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to update', required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
         request=ExperienceUpsertSerializer,
@@ -969,7 +1021,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Experience ID of the experience you want to delete', required=True,
+            OpenApiParameter(name='id', description='Experience ID of the experience you want to delete', required=True,
                              type=OpenApiTypes.STR,
                              location='path')
         ],
@@ -1090,7 +1142,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the Skill-proficiency you want to update for the resume',
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to update for the resume',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
@@ -1138,7 +1190,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the Skill-proficiency you want to delete for the resume',
+            OpenApiParameter(name='id', description='ID of the Skill-proficiency you want to delete for the resume',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
@@ -1301,7 +1353,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the project that you want to update',
+            OpenApiParameter(name='id', description='ID of the project that you want to update',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
@@ -1364,7 +1416,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the project that you want to delete',
+            OpenApiParameter(name='id', description='ID of the project that you want to delete',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
@@ -1465,7 +1517,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='Certification ID', required=True, location='path',
+            OpenApiParameter(name='id', description='Certification ID', required=True, location='path',
                              type=OpenApiTypes.STR)
         ],
         responses={200: CertificationSerializer, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
@@ -1530,7 +1582,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the certification that you want to update',
+            OpenApiParameter(name='id', description='ID of the certification that you want to update',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
@@ -1580,7 +1632,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
 
     @extend_schema(
         parameters=[
-            OpenApiParameter(name='pk', description='ID of the certification that you want to delete',
+            OpenApiParameter(name='id', description='ID of the certification that you want to delete',
                              required=True,
                              type=OpenApiTypes.STR, location='path')
         ],
