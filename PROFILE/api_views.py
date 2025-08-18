@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from CORE.serializers import ErrorEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
-from letraz_server.contrib.error_framework import ErrorResponse
+from letraz_server.contrib.error_framework import ErrorResponse, letraz_restapi_exception_handled
 from letraz_server.settings import PROJECT_NAME
 from .models import User
 from .serializers import UserSerializer, UserUpsertSerializer
@@ -48,43 +48,27 @@ class UserCRUD(APIView):
         # Ownership Check for all types of API
         self.authenticated_user: User = request.user
 
+    @letraz_restapi_exception_handled
     def get(self, request):
         """
         Returns a user's user info by the user's id. If the user info is not found, a 404 error is returned.
         """
         self.__set_meta(request)
-        try:
-            return Response(UserSerializer(self.authenticated_user).data)
-        except Exception as ex:
-            error_response = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR,
-                message='An unknown error occurred while fetching your information!',
-                details=ex.__str__(), status_code=500
-            )
-            logger.exception(f'{error_response.uuid} An unknown error occurred while fetching your information {ex}')
-            return error_response.response
+        return Response(UserSerializer(self.authenticated_user).data)
 
+    @letraz_restapi_exception_handled
     def patch(self, request):
         """
         Send a PATCH request with the user's data to add or upsert a user info entry.
         If the user info already exists, it will be updated. If the user info does not exist, it will be created.
         """
         self.__set_meta(request)
-        try:
-            user_ser: UserUpsertSerializer = UserUpsertSerializer(self.authenticated_user, data=request.data, partial=True)
-            if user_ser.is_valid():
-                user_info = user_ser.save()
-                return Response(UserSerializer(user_info).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
-                    details=user_ser.errors, extra={'data': request.data}
-                ).response
-        except Exception as ex:
-            error_response = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR,
-                message='An unknown error occurred while fetching your information!',
-                details=ex.__str__(), status_code=500
-            )
-            logger.exception(f'{error_response.uuid} An unknown error occurred while fetching your information {ex}')
-            return error_response.response
+        user_ser: UserUpsertSerializer = UserUpsertSerializer(self.authenticated_user, data=request.data, partial=True)
+        if user_ser.is_valid():
+            user_info = user_ser.save()
+            return Response(UserSerializer(user_info).data)
+        else:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message=f'Invalid Data provided!',
+                details=user_ser.errors, extra={'data': request.data}
+            ).response
