@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from CORE.models import Waitlist, Skill
-from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer, SkillSerializer, ErrorEnvelopeSerializer, ErrorListEnvelopeSerializer
+from CORE.serializers import WaitlistSerializer, HealthCheckSerializer, SkillSerializer, ErrorEnvelopeSerializer, ErrorListEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
 from letraz_server import settings

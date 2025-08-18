@@ -50,18 +50,15 @@ class ErrorResponseList:
         }, status.HTTP_400_BAD_REQUEST)
 
 
-def letraz_restapi_exception_handled():
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__(),
-                                               status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                logger.exception(
-                    f'[SOURCE: {func.__name__}.{func.__module__}()] UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
-                return error_response.response
+def letraz_restapi_exception_handled(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__(),
+                                           status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f'[SOURCE: {func.__module__}.{func.__name__}()] '
+                             f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
+            return error_response.response
 
-        return wrapper
-
-    return decorator
+    return wrapper
