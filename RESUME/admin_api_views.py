@@ -10,7 +10,7 @@ from RESUME.models import Resume
 from RESUME.serializers import ResumeFullSerializer
 from CORE.serializers import ErrorEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
-from letraz_server.contrib.error_framework import ErrorResponse
+from letraz_server.contrib.error_framework import ErrorResponse, letraz_restapi_exception_handled
 from letraz_server.contrib.admin_auth import admin_api_key_required
 from letraz_server.settings import PROJECT_NAME
 
@@ -47,6 +47,7 @@ ERROR_ENVELOPE = ErrorEnvelopeSerializer
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @admin_api_key_required
+@letraz_restapi_exception_handled
 def admin_resume_get(request, resume_id):
     """
     Admin endpoint to get complete resume data by ID
@@ -64,12 +65,3 @@ def admin_resume_get(request, resume_id):
         )
         logger.warning(f'UUID -> {error_response.uuid} | Resume not found: {resume_id}')
         return error_response.response
-    except Exception as e:
-        error_response = ErrorResponse(
-            code=ErrorCode.INTERNAL_SERVER_ERROR,
-            message=e.__str__(),
-            details={'resume_id': resume_id},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-        logger.exception(f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
-        return error_response.response 

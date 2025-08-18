@@ -268,9 +268,11 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Logging Configuration
-LOGGING = LoggingConfig(Path(
-    os.environ.get('LOG_FOLDER')) if os.environ.get('LOG_FOLDER') else BASE_DIR / 'logs', log_file_initial=PROJECT_NAME
-                        ).get_config()
+LOGGING = LoggingConfig(
+    Path(os.environ.get('LOG_FOLDER')) if os.environ.get('LOG_FOLDER') else BASE_DIR / 'logs', project_name=PROJECT_NAME
+).connect_logtail(
+    host=os.environ.get('LOGTAIL_INGESTING_HOST'), token=os.environ.get('LOGTAIL_SOURCE_TOKEN'),
+).get_config()
 
 #  Sentry Setup
 SENTRY_STATUS = 'UNINITIALIZED'

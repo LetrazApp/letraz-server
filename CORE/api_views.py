@@ -6,9 +6,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from CORE.models import Waitlist, Skill
-from CORE.serializers import WaitlistSerializer, ErrorSerializer, ErrorListSerializer, HealthCheckSerializer, SkillSerializer, ErrorEnvelopeSerializer, ErrorListEnvelopeSerializer
+from CORE.serializers import WaitlistSerializer, HealthCheckSerializer, SkillSerializer, ErrorEnvelopeSerializer, ErrorListEnvelopeSerializer
 from letraz_server.contrib.constant import ErrorCode
-from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList
+from letraz_server.contrib.error_framework import ErrorResponse, ErrorResponseList, letraz_restapi_exception_handled
 from letraz_server import settings
 from letraz_server.settings import PROJECT_NAME
 from letraz_server.contrib.sdks.knock import KnockSDK
@@ -29,6 +29,7 @@ ERROR_ENVELOPE = ErrorEnvelopeSerializer
 )
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@letraz_restapi_exception_handled
 def health_check(request):
     response = {'instance_id':  settings.INSTANCE_ID,'status': 'OPERATIONAL', 'details': {
         'sentry': settings.SENTRY_STATUS, "clerk": settings.CLERK_STATUS, "db": settings.DB_STATUS, 'util_service': settings.UTIL_GRPC_CHANNEL_STATUS

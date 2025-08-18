@@ -31,7 +31,7 @@ from RESUME.utils import (
 )
 from letraz_server import settings
 from letraz_server.contrib.constant import ErrorCode
-from letraz_server.contrib.error_framework import ErrorResponse
+from letraz_server.contrib.error_framework import ErrorResponse, letraz_restapi_exception_handled
 from letraz_server.settings import PROJECT_NAME
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2
@@ -105,6 +105,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
         summary="Replace resume sections",
         description="Replace all sections of a resume with the provided ordered list of sections."
     )
+    @letraz_restapi_exception_handled
     def update(self, request, pk=None):
         self.__set_meta(request)
         # Resolve resume
@@ -441,15 +442,6 @@ class ResumeViewSets(viewsets.GenericViewSet):
             )
             logger.exception(f"{error_response.uuid} -> Invalid request while replacing resume: {ve}")
             return error_response.response
-        except Exception as e:
-            error_response = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR,
-                message='Unexpected error occurred while replacing resume.',
-                details=str(e),
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f"{error_response.uuid} -> Exception while replacing resume: {e}")
-            return error_response.response
 
     @extend_schema(
         request=SectionRearrangeSerializer,
@@ -458,13 +450,14 @@ class ResumeViewSets(viewsets.GenericViewSet):
         description="Rearrange the order of sections in a resume by providing an array of section IDs in the desired order."
     )
     @action(detail=True, methods=['put'], url_path='sections/rearrange')
+    @letraz_restapi_exception_handled
     def rearrange_sections(self, request, pk=None):
         """
         Rearrange the order of sections in a resume.
         Accepts an array of section IDs and updates the order of sections in the resume.
         """
         self.__set_meta(request)
-        
+
         # Get the resume
         if pk == 'base':
             resume, created = self.authenticated_user.resume_set.get_or_create(base=True)
@@ -475,7 +468,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
                     code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': pk}
                 ).response
             resume = resume_qs.first()
-        
+
         # Validate request data
         serializer = SectionRearrangeSerializer(data=request.data)
         if not serializer.is_valid():
@@ -483,67 +476,59 @@ class ResumeViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message='Invalid request data.',
                 details=serializer.errors, extra={'data': request.data}
             ).response
-        
+
         section_ids = serializer.validated_data['section_ids']
-        
-        try:
-            # Get all existing sections for the resume
-            existing_sections = resume.resumesection_set.all()
-            existing_section_ids = set(str(section.id) for section in existing_sections)
-            provided_section_ids = set(str(section_id) for section_id in section_ids)
-            
-            # Validate that all provided section IDs belong to the resume
-            invalid_section_ids = provided_section_ids - existing_section_ids
-            if invalid_section_ids:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST, 
-                    message='Some section IDs do not belong to this resume.',
-                    details={'invalid_section_ids': list(invalid_section_ids)}
-                ).response
-            
-            # Check if all existing sections are included in the request
-            missing_section_ids = existing_section_ids - provided_section_ids
-            if missing_section_ids:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST,
-                    message='Some existing sections are missing from the request.',
-                    details={'missing_section_ids': list(missing_section_ids)}
-                ).response
-            
-            # Update the section order
-            with transaction.atomic():
-                # Create a mapping of section ID to section object
-                section_map = {str(section.id): section for section in existing_sections}
 
-                # Temporarily disable thumbnail generation signals during bulk updates
-                with disable_thumbnail_generation():
-                    # Two-step process to avoid unique constraint violation:
-                    # Step 1: Set all sections to temporary negative indices to avoid conflicts
-                    for temp_index, section_id in enumerate(section_ids):
-                        section = section_map[str(section_id)]
-                        section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
-                        section.save()
+        # Get all existing sections for the resume
+        existing_sections = resume.resumesection_set.all()
+        existing_section_ids = set(str(section.id) for section in existing_sections)
+        provided_section_ids = set(str(section_id) for section_id in section_ids)
 
-                    # Step 2: Set all sections to their final indices
-                    for new_index, section_id in enumerate(section_ids):
-                        section = section_map[str(section_id)]
-                        section.index = new_index
-                        section.save()
+        # Validate that all provided section IDs belong to the resume
+        invalid_section_ids = provided_section_ids - existing_section_ids
+        if invalid_section_ids:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST,
+                message='Some section IDs do not belong to this resume.',
+                details={'invalid_section_ids': list(invalid_section_ids)}
+            ).response
 
-            # Trigger a single thumbnail generation after reordering completes (non-blocking)
-            generate_resume_thumbnail_async(resume)
+        # Check if all existing sections are included in the request
+        missing_section_ids = existing_section_ids - provided_section_ids
+        if missing_section_ids:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST,
+                message='Some existing sections are missing from the request.',
+                details={'missing_section_ids': list(missing_section_ids)}
+            ).response
 
-            # Return the updated resume
-            return Response(ResumeFullSerializer(resume).data)
-            
-        except Exception as e:
-            error_response = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR,
-                message='Unexpected error occurred while rearranging sections.',
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while rearranging sections: {e}')
-            return error_response.response
+        # Update the section order
+        with transaction.atomic():
+            # Create a mapping of section ID to section object
+            section_map = {str(section.id): section for section in existing_sections}
+
+            # Temporarily disable thumbnail generation signals during bulk updates
+            with disable_thumbnail_generation():
+                # Two-step process to avoid unique constraint violation:
+                # Step 1: Set all sections to temporary negative indices to avoid conflicts
+                for temp_index, section_id in enumerate(section_ids):
+                    section = section_map[str(section_id)]
+                    section.index = -(temp_index + 1)  # Use negative values to avoid conflicts
+                    section.save()
+
+                # Step 2: Set all sections to their final indices
+                for new_index, section_id in enumerate(section_ids):
+                    section = section_map[str(section_id)]
+                    section.index = new_index
+                    section.save()
+
+        # Trigger a single thumbnail generation after reordering completes (non-blocking)
+        generate_resume_thumbnail_async(resume)
+
+        # Return the updated resume
+        return Response(ResumeFullSerializer(resume).data)
+
+
 
     @extend_schema(
         parameters=[
@@ -559,32 +544,32 @@ class ResumeViewSets(viewsets.GenericViewSet):
         Deletes a resume by its ID. Base resume cannot be deleted.
         """
         self.__set_meta(request)
-        
+
         # Check if trying to delete base resume
         if pk == 'base':
             return ErrorResponse(
-                code=ErrorCode.INVALID_REQUEST, 
-                message='Base resume cannot be deleted!', 
+                code=ErrorCode.INVALID_REQUEST,
+                message='Base resume cannot be deleted!',
                 details={'resume': pk}
             ).response
-        
+
         # Get the resume
         resume_qs = self.authenticated_user.resume_set.filter(id=pk)
         if not resume_qs.exists():
             return ErrorResponse(
                 code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': pk}
             ).response
-        
+
         resume = resume_qs.first()
-        
+
         # Additional check to prevent deletion of base resume by ID
         if resume.base:
             return ErrorResponse(
-                code=ErrorCode.INVALID_REQUEST, 
-                message='Base resume cannot be deleted!', 
+                code=ErrorCode.INVALID_REQUEST,
+                message='Base resume cannot be deleted!',
                 details={'resume': pk}
             ).response
-        
+
         try:
             resume.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -771,6 +756,7 @@ class EducationViewSets(viewsets.GenericViewSet):
         responses={200: EducationFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an education"
     )
+    @letraz_restapi_exception_handled
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
         """
         Updates an existing education entry from the user's resume as specified in the resume id.
@@ -779,39 +765,31 @@ class EducationViewSets(viewsets.GenericViewSet):
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
-        try:
-            if not self.authenticated_user.education_set.filter(
-                id=pk, resume_section__resume=self.resume
-            ).exists():
-                return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Education not found!', details={'education': pk}
-                ).response
-            
-            existing_education: Education = self.authenticated_user.education_set.get(
-                id=pk, resume_section__resume=self.resume
-            )
-            payload = request.data.copy()
-            payload['user'] = self.authenticated_user.id
-            payload['resume_section'] = existing_education.resume_section.id
-            
-            education_ser = EducationUpsertSerializer(existing_education, data=payload, partial=True)
-            
-            if education_ser.is_valid():
-                updated_education = education_ser.save()
-                index_resume_by_id_async(self.resume.id)
-                return Response(EducationFullSerializer(updated_education).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
-                    details=education_ser.errors, extra={'data': request.data}
-                ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while updating education: {e}')
-            return error_response.response
+        if not self.authenticated_user.education_set.filter(
+            id=pk, resume_section__resume=self.resume
+        ).exists():
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Education not found!', details={'education': pk}
+            ).response
+
+        existing_education: Education = self.authenticated_user.education_set.get(
+            id=pk, resume_section__resume=self.resume
+        )
+        payload = request.data.copy()
+        payload['user'] = self.authenticated_user.id
+        payload['resume_section'] = existing_education.resume_section.id
+
+        education_ser = EducationUpsertSerializer(existing_education, data=payload, partial=True)
+
+        if education_ser.is_valid():
+            updated_education = education_ser.save()
+            index_resume_by_id_async(self.resume.id)
+            return Response(EducationFullSerializer(updated_education).data)
+        else:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided.',
+                details=education_ser.errors, extra={'data': request.data}
+            ).response
 
     @extend_schema(
         parameters=[
@@ -821,6 +799,7 @@ class EducationViewSets(viewsets.GenericViewSet):
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete an education"
     )
+    @letraz_restapi_exception_handled
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Deletes an education from the user's resume as specified in the resume id.
@@ -905,6 +884,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         responses={201: ExperienceFullSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new experience",
     )
+    @letraz_restapi_exception_handled
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new experience to the user's resume as specified in the resume id.
@@ -977,6 +957,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         responses={200: ExperienceFullSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an experience"
     )
+    @letraz_restapi_exception_handled
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
         """
         Updates an existing experience in the user's resume as specified in the resume id.
@@ -985,39 +966,31 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         self.__set_meta(request, resume_id)
         if self.error:
             return self.error
-        try:
-            if not self.authenticated_user.experience_set.filter(
-                id=pk, resume_section__resume=self.resume
-            ).exists():
-                return ErrorResponse(
-                    code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': pk}
-                ).response
-            
-            existing_experience: Experience = self.authenticated_user.experience_set.get(
-                id=pk, resume_section__resume=self.resume
-            )
-            payload = request.data.copy()
-            payload['user'] = self.authenticated_user.id
-            payload['resume_section'] = existing_experience.resume_section.id
-            
-            experience_ser = ExperienceUpsertSerializer(existing_experience, data=payload, partial=True)
-            
-            if experience_ser.is_valid():
-                updated_experience = experience_ser.save()
-                index_resume_by_id_async(self.resume.id)
-                return Response(ExperienceFullSerializer(updated_experience).data)
-            else:
-                return ErrorResponse(
-                    code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided!',
-                    details=experience_ser.errors, extra={'data': request.data}
-                ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while updating experience: {e}')
-            return error_response.response
+        if not self.authenticated_user.experience_set.filter(
+            id=pk, resume_section__resume=self.resume
+        ).exists():
+            return ErrorResponse(
+                code=ErrorCode.NOT_FOUND, message='Experience not found!', details={'experience': pk}
+            ).response
+
+        existing_experience: Experience = self.authenticated_user.experience_set.get(
+            id=pk, resume_section__resume=self.resume
+        )
+        payload = request.data.copy()
+        payload['user'] = self.authenticated_user.id
+        payload['resume_section'] = existing_experience.resume_section.id
+
+        experience_ser = ExperienceUpsertSerializer(existing_experience, data=payload, partial=True)
+
+        if experience_ser.is_valid():
+            updated_experience = experience_ser.save()
+            index_resume_by_id_async(self.resume.id)
+            return Response(ExperienceFullSerializer(updated_experience).data)
+        else:
+            return ErrorResponse(
+                code=ErrorCode.INVALID_REQUEST, message='Invalid Data provided!',
+                details=experience_ser.errors, extra={'data': request.data}
+            ).response
 
     @extend_schema(
         parameters=[
@@ -1027,6 +1000,7 @@ class ExperienceViewSets(viewsets.GenericViewSet):
         ],
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE}, summary="Delete an experience"
     )
+    @letraz_restapi_exception_handled
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Deletes an experience from the user's resume as specified in the resume id.
@@ -1111,6 +1085,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
         responses={200: ProficiencySerializer, 400: ERROR_ENVELOPE},
         summary="Add a new skill",
     )
+    @letraz_restapi_exception_handled
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new Skill to the user's resume as specified in the resume id.
@@ -1131,14 +1106,6 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
-            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -1149,6 +1116,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
         responses={200: ProficiencySerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update an existing skill",
     )
+    @letraz_restapi_exception_handled
     def partial_update(self, request, resume_id: str, pk) -> Response:
         """
         Update an existing Skill-proficiency to the user's resume as specified in the resume id.
@@ -1179,14 +1147,6 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding experience: {e}')
-            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -1196,6 +1156,7 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
         ],
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE}, summary="Remove skill from resume"
     )
+    @letraz_restapi_exception_handled
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Deletes a skill-proficiency from the user's resume as specified in the resume id or base resume if `base ids provided as resume id`.
@@ -1213,11 +1174,6 @@ class ResumeSkillViewSets(viewsets.GenericViewSet):
         except ValueError as ve:
             return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='Invalid proficiency id.',
                                  extra={'proficiency': pk}).response
-        except Exception as ex:
-            error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                                           details=ex.__str__(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            logger.exception(f'{error_response.uuid} -> Unexpected exception occurred: {ex.__str__()}')
-            return error_response.response
 
     @extend_schema(
         responses={200: serializers.ListSerializer(child=serializers.CharField()), 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
@@ -1304,6 +1260,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
         responses={201: ProjectSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new project",
     )
+    @letraz_restapi_exception_handled
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new project to the user's resume as specified in the resume id.
@@ -1342,14 +1299,6 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
-            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -1361,6 +1310,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
         responses={200: ProjectSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update a project",
     )
+    @letraz_restapi_exception_handled
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
         """
         Updates an existing project of the user's resume as specified in the resume id.
@@ -1405,14 +1355,6 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
-            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -1424,6 +1366,7 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete a project",
     )
+    @letraz_restapi_exception_handled
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Delete an existing project of the user's resume as specified in the resume id.
@@ -1448,14 +1391,6 @@ class ResumeProjectViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
-            return error_response.response
 
 # Certification CRUD ViewSets for a Resume
 @extend_schema(
@@ -1541,6 +1476,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
         responses={201: CertificationSerializer, 400: ERROR_ENVELOPE},
         summary="Create a new certification",
     )
+    @letraz_restapi_exception_handled
     def create(self, request, resume_id: str) -> Response:
         """
         Adds a new certification to the user's resume as specified in the resume id.
@@ -1571,14 +1507,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding certification: {e}')
-            return error_response.response
+
 
     @extend_schema(
         parameters=[
@@ -1590,6 +1519,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
         responses={200: CertificationSerializer, 400: ERROR_ENVELOPE, 404: ERROR_ENVELOPE},
         summary="Update a certification",
     )
+    @letraz_restapi_exception_handled
     def partial_update(self, request, resume_id: str, pk: str) -> Response:
         """
         Updates an existing certification of the user's resume as specified in the resume id.
@@ -1621,14 +1551,6 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
-            return error_response.response
 
     @extend_schema(
         parameters=[
@@ -1640,6 +1562,7 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
         responses={204: None, 404: ERROR_ENVELOPE, 400: ERROR_ENVELOPE},
         summary="Delete a certification",
     )
+    @letraz_restapi_exception_handled
     def destroy(self, request, resume_id: str, pk: str) -> Response:
         """
         Delete an existing certification of the user's resume as specified in the resume id.
@@ -1664,14 +1587,6 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
                 code=ErrorCode.INVALID_REQUEST, message=ve.__str__(),
                 extra={'data': request.data}, status_code=status.HTTP_400_BAD_REQUEST
             ).response
-        except Exception as e:
-            error_response: ErrorResponse = ErrorResponse(
-                code=ErrorCode.INTERNAL_SERVER_ERROR, message='Unexpected error occurred.',
-                details=e.__str__(), extra={'data': request.data},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            logger.exception(f'{error_response.uuid} -> Exception while adding project: {e}')
-            return error_response.response
 
 @extend_schema(
     methods=['POST'],
@@ -1699,92 +1614,64 @@ class ResumeCertificationViewSets(viewsets.GenericViewSet):
     }
 )
 @api_view(['POST'])
+@letraz_restapi_exception_handled
 def tailor_resume(request):
     """
     Start resume tailoring process
     """
-    try:
-        url_pattern = r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)'
-        target:str = request.data.get('target')
-        if not target:
-            return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='"target" is required in body!').response
-        if re.match(url_pattern, target):
-            sanitized_url = str(target).strip().rstrip('/')
+    url_pattern = r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)'
+    target:str = request.data.get('target')
+    if not target:
+        return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='"target" is required in body!').response
+    if re.match(url_pattern, target):
+        sanitized_url = str(target).strip().rstrip('/')
 
-            sanitized_url_job_qs = Job.objects.filter(job_url=sanitized_url)
-            if sanitized_url_job_qs.exists():
-                job = sanitized_url_job_qs.first()
-                # Only unavailable if the job scraping is not completed successfully
-                if job.status != Job.Status.Success:
-                    return ErrorResponse(code=ErrorCode.UNAVAILABLE, message='This service is temporarily unavailable please try after some time', status_code=503).response
-                # If a resume exists for THIS user and this job, return it; otherwise create a new one for this user
-                job_resume_qs = Resume.objects.filter(job=job, user=request.user)
-                if job_resume_qs.exists():
-                    return Response(ResumeFullSerializer(job_resume_qs.first(), many=False).data)
-                else:
-                    new_resume_for_job = Resume.objects.create(job=job, user=request.user, status=Resume.Status.Processing.value)
-                    # GRPC: Call Tailor-Resume RPC method to Util service
-                    base_resume = request.user.resume_set.get(base=True)
-                    process = Process.objects.create(desc='Tailor Resume Process')
-                    try:
-                        resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
-                        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeUtilSerializer(base_resume, many=False).data, job=JobSerializer(job, many=False).data, resume_id=new_resume_for_job.id)
-                        res = MessageToDict(resume_service.TailorResume(req))
-                        logger.debug(f'Tailor Resume Process: \n{res}')
-                        process.status = res.get('status')
-                        process.util_id = res.get('processId')
-                        process.status_details = res.get('message')
-                        process.save()
-                        new_resume_for_job.process = process
-                        new_resume_for_job.save()
-                    except Exception as e:
-                        error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
-                        logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
-                        process.status = Process.ProcessStatus.Failed.value
-                        process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
-                        process.save()
-                        if new_resume_for_job:
-                            new_resume_for_job.delete()
-                        return error_response.response
-                    return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
+        sanitized_url_job_qs = Job.objects.filter(job_url=sanitized_url)
+        if sanitized_url_job_qs.exists():
+            job = sanitized_url_job_qs.first()
+            # Only unavailable if the job scraping is not completed successfully
+            if job.status != Job.Status.Success:
+                return ErrorResponse(code=ErrorCode.UNAVAILABLE, message='This service is temporarily unavailable please try after some time', status_code=503).response
+            # If a resume exists for THIS user and this job, return it; otherwise create a new one for this user
+            job_resume_qs = Resume.objects.filter(job=job, user=request.user)
+            if job_resume_qs.exists():
+                return Response(ResumeFullSerializer(job_resume_qs.first(), many=False).data)
             else:
-                new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
-                new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing.value)
-                # GRPC: Call Scrape-Job RPC method with URL to Util service
-                process = Process.objects.create(desc='Scrape Job Process')
+                new_resume_for_job = Resume.objects.create(job=job, user=request.user, status=Resume.Status.Processing.value)
+                # GRPC: Call Tailor-Resume RPC method to Util service
+                base_resume = request.user.resume_set.get(base=True)
+                process = Process.objects.create(desc='Tailor Resume Process')
                 try:
-                    scrapper = letraz_utils_pb2_grpc.ScraperServiceStub(settings.UTIL_GRPC_CHANNEL)
-                    req = letraz_utils_pb2.ScrapeJobRequest(url=sanitized_url)
-                    res = MessageToDict(scrapper.ScrapeJob(req))
-                    logger.debug(f'Scrapper Response: \n{res}')
+                    resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
+                    req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeUtilSerializer(base_resume, many=False).data, job=JobSerializer(job, many=False).data, resume_id=new_resume_for_job.id)
+                    res = MessageToDict(resume_service.TailorResume(req))
+                    logger.debug(f'Tailor Resume Process: \n{res}')
                     process.status = res.get('status')
                     process.util_id = res.get('processId')
                     process.status_details = res.get('message')
                     process.save()
-                    new_job_obj.process = process
-                    new_job_obj.save()
+                    new_resume_for_job.process = process
+                    new_resume_for_job.save()
                 except Exception as e:
                     error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                     logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                     process.status = Process.ProcessStatus.Failed.value
                     process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                     process.save()
-                    if new_job_obj:
-                        new_job_obj.delete()
                     if new_resume_for_job:
                         new_resume_for_job.delete()
                     return error_response.response
                 return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
-        elif len(str(target.strip())) > 300:
-            new_job_obj = Job.objects.create(title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
+        else:
+            new_job_obj = Job.objects.create(job_url=sanitized_url, title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
             new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing.value)
-            # GRPC: Call Scrape-Job RPC method with Description to Util service
+            # GRPC: Call Scrape-Job RPC method with URL to Util service
             process = Process.objects.create(desc='Scrape Job Process')
             try:
                 scrapper = letraz_utils_pb2_grpc.ScraperServiceStub(settings.UTIL_GRPC_CHANNEL)
-                req = letraz_utils_pb2.ScrapeJobRequest(description=target.strip())
+                req = letraz_utils_pb2.ScrapeJobRequest(url=sanitized_url)
                 res = MessageToDict(scrapper.ScrapeJob(req))
-                logger.debug(f'Scrapper Response: {res}')
+                logger.debug(f'Scrapper Response: \n{res}')
                 process.status = res.get('status')
                 process.util_id = res.get('processId')
                 process.status_details = res.get('message')
@@ -1795,7 +1682,7 @@ def tailor_resume(request):
                 error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                 logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                 process.status = Process.ProcessStatus.Failed.value
-                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'[:249]
+                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
                 process.save()
                 if new_job_obj:
                     new_job_obj.delete()
@@ -1803,10 +1690,34 @@ def tailor_resume(request):
                     new_resume_for_job.delete()
                 return error_response.response
             return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
-        else:
-            return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='Description is too short.').response
-    except Exception as e:
-        error_response = ErrorResponse(code=ErrorCode.INVALID_REQUEST, message=e.__str__(), extra={'data': request.data})
-        logger.exception(f'UUID -> {error_response.uuid} | Unknown error encountered: {e.__str__()}')
-        return error_response.response
+    elif len(str(target.strip())) > 300:
+        new_job_obj = Job.objects.create(title='<UNDER_EXTRACTION>', company_name='<UNDER_EXTRACTION>', status=Job.Status.Processing.value)
+        new_resume_for_job = Resume.objects.create(job=new_job_obj, user=request.user, status=Resume.Status.Processing.value)
+        # GRPC: Call Scrape-Job RPC method with Description to Util service
+        process = Process.objects.create(desc='Scrape Job Process')
+        try:
+            scrapper = letraz_utils_pb2_grpc.ScraperServiceStub(settings.UTIL_GRPC_CHANNEL)
+            req = letraz_utils_pb2.ScrapeJobRequest(description=target.strip())
+            res = MessageToDict(scrapper.ScrapeJob(req))
+            logger.debug(f'Scrapper Response: {res}')
+            process.status = res.get('status')
+            process.util_id = res.get('processId')
+            process.status_details = res.get('message')
+            process.save()
+            new_job_obj.process = process
+            new_job_obj.save()
+        except Exception as e:
+            error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
+            logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
+            process.status = Process.ProcessStatus.Failed.value
+            process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'[:249]
+            process.save()
+            if new_job_obj:
+                new_job_obj.delete()
+            if new_resume_for_job:
+                new_resume_for_job.delete()
+            return error_response.response
+        return Response(ResumeFullSerializer(new_resume_for_job, many=False).data)
+    else:
+        return ErrorResponse(code=ErrorCode.INVALID_REQUEST, message='Description is too short.').response
 
