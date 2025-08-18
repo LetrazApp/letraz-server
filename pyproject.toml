@@ -23,6 +23,7 @@ dependencies = [
     "protobuf>=6.31.1",
     "django-socio-grpc>=0.24.4",
     "algoliasearch>=4,<5",
+    "logtail-python>=0.3.3",
 ]
 
 [dependency-groups]
