@@ -341,11 +341,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: Resume ID
         required: true
       tags:
@@ -381,11 +376,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Resume ID
@@ -427,6 +417,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: ''
+    delete:
+      operationId: resume_destroy
+      description: Delete a resume by its ID. Base resume cannot be deleted.
+      summary: Delete a resume
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Resume ID
+        required: true
+      tags:
+      - Resume object
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: ''
   /resume/{id}/export/:
     get:
       operationId: resume_export_retrieve
@@ -436,11 +458,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Resume ID
@@ -618,11 +635,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: Certification ID
         required: true
       - in: path
@@ -667,11 +679,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: ID of the certification that you want to update
@@ -729,11 +736,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: ID of the certification that you want to delete
@@ -862,11 +864,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: Education ID of the education you want to retrieve
         required: true
       - in: path
@@ -910,11 +907,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Education ID of the education you want to update
@@ -970,11 +962,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Education ID of the education you want to delete
@@ -1102,11 +1089,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: Experience ID of the experience you want to retrieve
         required: true
       - in: path
@@ -1150,11 +1132,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Experience ID of the experience you want to update
@@ -1210,11 +1187,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: Experience ID of the experience you want to delete
@@ -1345,11 +1317,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: ID of the project that you want to update
         required: true
       - in: path
@@ -1404,11 +1371,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: ID of the project that you want to delete
@@ -1539,11 +1501,6 @@ paths:
         name: id
         schema:
           type: string
-        required: true
-      - in: path
-        name: pk
-        schema:
-          type: string
         description: ID of the Skill-proficiency you want to update for the resume
         required: true
       - in: path
@@ -1597,11 +1554,6 @@ paths:
       parameters:
       - in: path
         name: id
-        schema:
-          type: string
-        required: true
-      - in: path
-        name: pk
         schema:
           type: string
         description: ID of the Skill-proficiency you want to delete for the resume
