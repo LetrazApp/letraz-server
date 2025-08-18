@@ -37,12 +37,12 @@ class TailorResumeCallBackService(generics.GenericService):
         in_progress_resume_qs = Resume.objects.filter(process=process)
         if not await in_progress_resume_qs.aexists():
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details = f"No resume found for the process: {process.id}"
+            process.status_details = f"No resume found for the process: {process.id}"[:249]
             await process.asave()
             raise NotFound(f"No resume found for the process: {process.id}")
         if not request.data or not request.data.tailored_resume or not request.data.tailored_resume.sections:
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details = f"Must return a resume object with sections"
+            process.status_details = f"Must return a resume object with sections"[:249]
             await process.asave()
             raise InvalidArgument(f"Must return a resume object with sections")
         try:
@@ -187,12 +187,12 @@ class GenerateScreenshotCallBackService(generics.GenericService):
         thumbnail_in_progress_resume_qs = Resume.objects.filter(thumbnail_process=process)
         if not await thumbnail_in_progress_resume_qs.aexists():
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details = f"No resume found for the process: {process.id}"
+            process.status_details = f"No resume found for the process: {process.id}"[:249]
             await process.asave()
             raise NotFound(f"No resume found for the process: {process.id}")
         if not request.data or not request.data.screenshot_url :
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details = f"Must return a data object with screenshot_url in the response"
+            process.status_details = f"Must return a data object with screenshot_url in the response"[:249]
             await process.asave()
             raise InvalidArgument(f"Must return a data object with screenshot_url in the response")
         try:

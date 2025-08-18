@@ -1648,7 +1648,7 @@ def tailor_resume(request):
                     logger.debug(f'Tailor Resume Process: \n{res}')
                     process.status = res.get('status')
                     process.util_id = res.get('processId')
-                    process.status_details = res.get('message')
+                    process.status_details = res.get('message')[:249]
                     process.save()
                     new_resume_for_job.process = process
                     new_resume_for_job.save()
@@ -1656,7 +1656,7 @@ def tailor_resume(request):
                     error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                     logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                     process.status = Process.ProcessStatus.Failed.value
-                    process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
+                    process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'[:249]
                     process.save()
                     if new_resume_for_job:
                         new_resume_for_job.delete()
@@ -1674,7 +1674,7 @@ def tailor_resume(request):
                 logger.debug(f'Scrapper Response: \n{res}')
                 process.status = res.get('status')
                 process.util_id = res.get('processId')
-                process.status_details = res.get('message')
+                process.status_details = res.get('message')[:249]
                 process.save()
                 new_job_obj.process = process
                 new_job_obj.save()
@@ -1682,7 +1682,7 @@ def tailor_resume(request):
                 error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
                 logger.exception(f'UUID -> {error_response.uuid} | GRPC call error [UTIL]: {e.__str__()}')
                 process.status = Process.ProcessStatus.Failed.value
-                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'
+                process.status_details = f'[UUID- {error_response.uuid}] - {e.__str__()}'[:249]
                 process.save()
                 if new_job_obj:
                     new_job_obj.delete()
@@ -1702,7 +1702,7 @@ def tailor_resume(request):
             logger.debug(f'Scrapper Response: {res}')
             process.status = res.get('status')
             process.util_id = res.get('processId')
-            process.status_details = res.get('message')
+            process.status_details = res.get('message')[:249]
             process.save()
             new_job_obj.process = process
             new_job_obj.save()

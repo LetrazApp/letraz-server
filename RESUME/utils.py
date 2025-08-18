@@ -75,7 +75,7 @@ def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None)
         logger.debug(f'[source={source}] :: call_tailor_resume_util_service : Response: \n{res}')
         process.status = res.get('status')
         process.util_id = res.get('processId')
-        process.status_details = res.get('message')
+        process.status_details = res.get('message')[:249]
         process.save()
         target_resume.process = process
         target_resume.save()
@@ -84,7 +84,7 @@ def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None)
         error_response = ErrorResponse(code=ErrorCode.INTERNAL_SERVER_ERROR, message=e.__str__())
         logger.exception(f'Exception=> [Source={source}] | GRPC call error [UTIL]: {e.__str__()}')
         process.status = Process.ProcessStatus.Failed.value
-        process.status_details = f'[Source={source}] - {e.__str__()}'
+        process.status_details = f'[Source={source}] - {e.__str__()}'[:249]
         process.save()
         return None, error_response
 
@@ -222,7 +222,7 @@ def generate_resume_thumbnail(resume):
         # Step 4: Update process with response
         thumbnail_process.status = res.get('status')
         thumbnail_process.util_id = res.get('processId')  # gRPC response uses camelCase 'processId'
-        thumbnail_process.status_details = res.get('message')
+        thumbnail_process.status_details = res.get('message')[:249]
         thumbnail_process.save()
         
         logger.info(f'Thumbnail generation accepted for resume {resume.id}, process_id: {thumbnail_process.util_id}')

@@ -31,12 +31,12 @@ class ScrapeJobCallbackService(generics.GenericService):
         in_progress_job_qs = Job.objects.filter(process=process)
         if not await in_progress_job_qs.aexists():
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details=f"No job found for the process: {process.id}"
+            process.status_details=f"No job found for the process: {process.id}"[:249]
             await process.asave()
             raise NotFound(f"No job found for the process: {process.id}")
         if not request.data or not request.data.job:
             process.status = Process.ProcessStatus.Failed.value
-            process.status_details = f"Must return a job object"
+            process.status_details = f"Must return a job object"[:249]
             await process.asave()
             raise InvalidArgument(f"Must return a job object")
         try:
