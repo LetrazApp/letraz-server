@@ -1,3 +1,4 @@
+import functools
 import logging
 import uuid
 from rest_framework import status
@@ -51,6 +52,7 @@ class ErrorResponseList:
 
 
 def letraz_restapi_exception_handled(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
