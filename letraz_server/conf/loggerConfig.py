@@ -64,7 +64,7 @@ class LoggingConfig:
     def connect_logtail(self, host, token):
         if host and token:
             self.__handlers['logtail'] = {
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'class': 'logtail.LogtailHandler',
                 'source_token': token,
                 'host': host,
