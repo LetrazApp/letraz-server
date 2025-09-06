@@ -91,9 +91,6 @@ if not KNOCK_API_KEY:
     KNOCK_STATUS = 'DOWN'
     startup_logger.error('Knock API_KEY is not provided!')
 
-# Client URL (Frontend)
-CLIENT_URL = os.environ.get('CLIENT_URL', '')
-
 # Admin API Configuration
 ADMIN_API_KEY = os.environ.get('ADMIN_API_KEY', '')
 if not ADMIN_API_KEY:
