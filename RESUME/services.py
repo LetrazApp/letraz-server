@@ -14,6 +14,7 @@ from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_th
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
+from JOB.models import Job
 from letraz_server.contrib.sdks.knock import KnockSDK
 from letraz_server import settings
 __module_name = f'{PROJECT_NAME}.' + __name__
@@ -164,6 +165,17 @@ class TailorResumeCallBackService(generics.GenericService):
             try:
                 knock = KnockSDK(api_key=settings.KNOCK_API_KEY)
                 if knock.is_available() and in_progress_resume.user_id:
+                    # Fetch job metadata asynchronously to avoid sync access in async context
+                    job_title = None
+                    company_name = None
+                    if in_progress_resume.job_id:
+                        try:
+                            job_obj = await Job.objects.filter(id=in_progress_resume.job_id).only('title', 'company_name').afirst()
+                            if job_obj:
+                                job_title = job_obj.title
+                                company_name = job_obj.company_name
+                        except Exception:
+                            pass
                     knock.trigger_workflow(
                         workflow_key="resume-tailored",
                         user_id=str(in_progress_resume.user_id),
@@ -171,8 +183,8 @@ class TailorResumeCallBackService(generics.GenericService):
                             "resume_id": in_progress_resume.id,
                             "job_id": in_progress_resume.job_id,
                             "cta_url": f"{settings.CLIENT_URL}/app/craft/resumes/{in_progress_resume.id}",
-                            "job_title": in_progress_resume.job.title if in_progress_resume.job else None,
-                            "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
+                            "job_title": job_title,
+                            "company_name": company_name,
                         }
                     )
                 elif not knock.is_available():
@@ -191,6 +203,17 @@ class TailorResumeCallBackService(generics.GenericService):
                 knock = KnockSDK(api_key=settings.KNOCK_API_KEY)
                 if knock.is_available() and in_progress_resume_qs:
                     in_progress_resume = await in_progress_resume_qs.afirst()
+                    # Fetch job metadata asynchronously
+                    job_title = None
+                    company_name = None
+                    if in_progress_resume and in_progress_resume.job_id:
+                        try:
+                            job_obj = await Job.objects.filter(id=in_progress_resume.job_id).only('title', 'company_name').afirst()
+                            if job_obj:
+                                job_title = job_obj.title
+                                company_name = job_obj.company_name
+                        except Exception:
+                            pass
                     if in_progress_resume and in_progress_resume.user_id:
                         knock.trigger_workflow(
                             workflow_key="resume-tailor-failed",
@@ -201,8 +224,8 @@ class TailorResumeCallBackService(generics.GenericService):
                                 "reason": str(e),
                                 # Placeholder report URL until provided
                                 "report_url": f"{settings.CLIENT_URL}/app/support?resumeId={in_progress_resume.id}" if settings.CLIENT_URL else None,
-                                "job_title": in_progress_resume.job.title if in_progress_resume.job else None,
-                                "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
+                                "job_title": job_title,
+                                "company_name": company_name,
                             }
                         )
                 elif not knock.is_available():
