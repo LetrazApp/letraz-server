@@ -72,7 +72,25 @@ class BaseResumeUtilSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_user(resume: Resume):
-        return UserSerializer(resume.user).data
+        user = resume.user
+        return {
+            'id': str(user.id),
+            'title': user.title or '',
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'email': user.email or '',
+            'phone': user.phone or '',
+            'dob': user.dob.isoformat() if getattr(user, 'dob', None) else '',
+            'nationality': user.nationality or '',
+            'address': user.address or '',
+            'city': user.city or '',
+            'postal': user.postal or '',
+            'country': user.country.code if getattr(user, 'country_id', None) else '',
+            'website': user.website or '',
+            'profile_text': user.profile_text or '',
+            'created_at': user.created_at.isoformat() if getattr(user, 'created_at', None) else '',
+            'updated_at': user.updated_at.isoformat() if getattr(user, 'updated_at', None) else '',
+        }
 
     @staticmethod
     def get_sections(resume: Resume):
