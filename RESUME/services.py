@@ -14,6 +14,8 @@ from RESUME.utils import bulk_call_tailor_resume_for_the_job, generate_resume_th
 from letraz_server.settings import PROJECT_NAME
 from django_socio_grpc.decorators import grpc_action
 from google.protobuf.json_format import MessageToDict, MessageToJson
+from letraz_server.contrib.sdks.knock import KnockSDK
+from letraz_server import settings
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
 
@@ -158,12 +160,51 @@ class TailorResumeCallBackService(generics.GenericService):
                 # Don't fail the main process if thumbnail generation fails
                 logger.warning(f"[util id - {util_process_id}] Thumbnail generation failed for resume {in_progress_resume.id}: {thumb_e}")
 
+            # Notify user that resume tailoring succeeded
+            try:
+                knock = KnockSDK(api_key=settings.KNOCK_API_KEY)
+                if knock.is_available() and in_progress_resume.user_id:
+                    knock.trigger_workflow(
+                        workflow_key="resume-tailored",
+                        user_id=str(in_progress_resume.user_id),
+                        data={
+                            "resume_id": in_progress_resume.id,
+                            "job_id": in_progress_resume.job_id,
+                            "cta_url": f"{settings.CLIENT_URL}/app/craft/resumes/{in_progress_resume.id}",
+                            "job_title": in_progress_resume.job.title if in_progress_resume.job else None,
+                            "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
+                        }
+                    )
+            except Exception:
+                pass
+
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
             error_msg = f'[util id - {util_process_id}] [method: ScrapeJobCallBack] {str(e)}'
             logger.exception(error_msg)
             process.status_details = error_msg[:249]
             await process.asave()
+            # Notify user that resume tailoring failed
+            try:
+                knock = KnockSDK(api_key=settings.KNOCK_API_KEY)
+                if knock.is_available() and in_progress_resume_qs:
+                    in_progress_resume = await in_progress_resume_qs.afirst()
+                    if in_progress_resume and in_progress_resume.user_id:
+                        knock.trigger_workflow(
+                            workflow_key="resume-tailor-failed",
+                            user_id=str(in_progress_resume.user_id),
+                            data={
+                                "resume_id": in_progress_resume.id if in_progress_resume else None,
+                                "job_id": in_progress_resume.job_id if in_progress_resume else None,
+                                "reason": str(e),
+                                # Placeholder report URL until provided
+                                "report_url": f"{settings.CLIENT_URL}/app/support?resumeId={in_progress_resume.id}" if settings.CLIENT_URL else None,
+                                "job_title": in_progress_resume.job.title if in_progress_resume.job else None,
+                                "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
+                            }
+                        )
+            except Exception:
+                pass
             raise GRPCException(str(e))
         return ScrapeJobResponseSerializer("OK").message
 
