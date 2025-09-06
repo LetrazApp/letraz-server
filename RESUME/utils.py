@@ -16,7 +16,7 @@ from django.contrib.auth.models import User as AuthUser
 
 from RESUME.serializers import BaseResumeFullSerializer, BaseResumeUtilSerializer
 from letraz_server.conf.grpc_client.utils import letraz_utils_pb2_grpc, letraz_utils_pb2
-from google.protobuf.json_format import MessageToDict
+from google.protobuf.json_format import MessageToDict, ParseDict
 
 from letraz_server.contrib.constant import ErrorCode
 from letraz_server.contrib.error_framework import ErrorResponse
@@ -68,9 +68,19 @@ def call_tailor_resume_util_service(job:Job, target_resume: Resume, source=None)
     try:
         base_resume = target_resume.user.resume_set.get(base=True)
         resume_service = letraz_utils_pb2_grpc.ResumeServiceStub(settings.UTIL_GRPC_CHANNEL)
-        req = letraz_utils_pb2.TailorResumeRequest(base_resume=BaseResumeUtilSerializer(base_resume, many=False).data,
-                                                   job=JobSerializer(job, many=False).data,
-                                                   resume_id=target_resume.id)
+        # Convert serialized data to protobuf message objects
+        base_resume_data = BaseResumeUtilSerializer(base_resume, many=False).data
+        job_data = JobSerializer(job, many=False).data
+        
+        # Parse dictionaries into protobuf message objects
+        base_resume_msg = ParseDict(base_resume_data, letraz_utils_pb2.BaseResume())
+        job_msg = ParseDict(job_data, letraz_utils_pb2.Job())
+        
+        req = letraz_utils_pb2.TailorResumeRequest(
+            base_resume=base_resume_msg,
+            job=job_msg,
+            resume_id=target_resume.id
+        )
         res = MessageToDict(resume_service.TailorResume(req))
         logger.debug(f'[source={source}] :: call_tailor_resume_util_service : Response: \n{res}')
         process.status = res.get('status')
