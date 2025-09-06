@@ -57,9 +57,10 @@ class ScrapeJobCallbackService(generics.GenericService):
                                 "job_url": None,
                             }
                         )
-            except Exception:
-                # Do not interrupt error flow due to notification issues
-                pass
+                else:
+                    logger.warning(f"Knock not available; skipping job-scrape-failed notifications for process {process.id}")
+            except Exception as notify_err:
+                logger.exception(f"Failed to send job-scrape-failed notifications for process {process.id}: {notify_err}")
             raise NotFound(f"No job found for the process: {process.id}")
         if not request.data or not request.data.job:
             process.status = Process.ProcessStatus.Failed.value
@@ -96,8 +97,10 @@ class ScrapeJobCallbackService(generics.GenericService):
                                 **job_meta,
                             }
                         )
-            except Exception:
-                pass
+                else:
+                    logger.warning(f"Knock not available; skipping job-scrape-failed notifications for process {process.id}")
+            except Exception as notify_err:
+                logger.exception(f"Failed to send job-scrape-failed notifications for process {process.id}: {notify_err}")
             raise InvalidArgument(f"Must return a job object")
         in_progress_job = None
         try:
@@ -152,8 +155,10 @@ class ScrapeJobCallbackService(generics.GenericService):
                                 "job_url": getattr(in_progress_job, 'job_url', None) if in_progress_job else None,
                             }
                         )
-            except Exception:
-                pass
+                else:
+                    logger.warning(f"Knock not available; skipping job-scrape-failed notifications for process {process.id}")
+            except Exception as notify_err:
+                logger.exception(f"Failed to send job-scrape-failed notifications for process {process.id}: {notify_err}")
             raise GRPCException(str(e))
 
         return ScrapeJobResponseSerializer("OK").message
