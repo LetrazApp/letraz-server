@@ -175,8 +175,10 @@ class TailorResumeCallBackService(generics.GenericService):
                             "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
                         }
                     )
+                elif not knock.is_available():
+                    logger.warning(f"Knock not available; skipping resume-tailored notification for resume {in_progress_resume.id}")
             except Exception:
-                pass
+                logger.exception(f"Failed to send resume-tailored notification for resume {in_progress_resume.id}")
 
         except Exception as e:
             process.status = Process.ProcessStatus.Failed.value
@@ -203,8 +205,10 @@ class TailorResumeCallBackService(generics.GenericService):
                                 "company_name": in_progress_resume.job.company_name if in_progress_resume.job else None,
                             }
                         )
+                elif not knock.is_available():
+                    logger.warning("Knock not available; skipping resume-tailor-failed notification")
             except Exception:
-                pass
+                logger.exception("Failed to send resume-tailor-failed notification")
             raise GRPCException(str(e))
         return ScrapeJobResponseSerializer("OK").message
 
