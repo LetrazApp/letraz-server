@@ -219,3 +219,18 @@ def handle_resume_change(sender, instance: Resume, created, **kwargs):
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')
         if should_generate_thumbnail(instance, 'section_added'):
             transaction.on_commit(lambda: generate_resume_thumbnail_async(instance))
+@receiver(post_delete, sender=Resume)
+def handle_resume_delete(sender, instance: Resume, **kwargs):
+    """
+    Remove a resume from Algolia when it is deleted from the database.
+    Uses the same index ('resume') and objectID as AlgoliaIngestionClient.
+    """
+    try:
+        if ALGOLIA_CLIENT.client is None:
+            logger.warning(f"Algolia client not initialized. Skipping deletion of resume {instance.id}")
+            return
+        ALGOLIA_CLIENT.client.delete_object(index_name="resume", object_id=instance.id)
+
+        logger.info(f"Resume {instance.id} deleted from Algolia index.")
+    except Exception as e:
+        logger.error(f"Failed to delete resume {instance.id} from Algolia: {e}", exc_info=True)
