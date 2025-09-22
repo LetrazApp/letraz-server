@@ -92,7 +92,7 @@ class ResumeViewSets(viewsets.GenericViewSet):
             return Response(ResumeFullSerializer(resume_by_user_and_resume_id_qs.first()).data)
         else:
             return ErrorResponse(
-                code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}
+                code=ErrorCode.NOT_FOUND, message='Resume not found!', details={'resume': resume_id}, status_code=404
             ).response
 
     @extend_schema(
