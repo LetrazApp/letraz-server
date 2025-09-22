@@ -215,7 +215,7 @@ def handle_certification_delete(sender, instance, **kwargs):
 def handle_resume_change(sender, instance: Resume, created, **kwargs):
     """Trigger thumbnail generation when resume is created or significantly modified"""
     if created and instance.base:
-        # New base resume created - generate thumbnail immediately
+        # New base resume created- generate thumbnail immediately
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')
         if should_generate_thumbnail(instance, 'section_added'):
             transaction.on_commit(lambda: generate_resume_thumbnail_async(instance))
