@@ -12,6 +12,7 @@ from .models import Resume, ResumeSection, Education, Experience, Project, Certi
 from .serializers import ResumeFullSerializer
 from .utils import should_generate_thumbnail, generate_resume_thumbnail_async
 from letraz_server.settings import PROJECT_NAME, ALGOLIA_CLIENT
+import sentry_sdk
 
 __module_name = f'{PROJECT_NAME}.' + __name__
 logger = logging.getLogger(__module_name)
@@ -219,3 +220,41 @@ def handle_resume_change(sender, instance: Resume, created, **kwargs):
         logger.info(f'New base resume {instance.id} created for user {instance.user.id}')
         if should_generate_thumbnail(instance, 'section_added'):
             transaction.on_commit(lambda: generate_resume_thumbnail_async(instance))
+
+@receiver(post_delete, sender=Resume, dispatch_uid="resume_post_delete_algolia_sync")
+def handle_resume_delete(sender, instance: Resume, **kwargs):
+    """
+    Remove a resume from Algolia after the DB transaction commits.
+    """
+    resume_id = str(instance.id)
+    user_id = str(instance.user.id)
+
+    def _deindex():
+        try:
+            client = getattr(ALGOLIA_CLIENT, "client", None)
+            if client is None:
+                logger.warning("Algolia client is not initialized, skipping deindex.")
+                return
+
+            index_name = "resume"
+            client.delete_object(index_name=index_name, object_id=resume_id)
+            logger.info(f"Deleted resume {resume_id} from Algolia index '{index_name}'.")
+
+        except Exception as e:
+            # Log locally
+            logger.error(
+                "Failed to delete resume %s (user %s) from Algolia index: %s",
+                resume_id,
+                user_id,
+                str(e),
+                exc_info=True,
+            )
+
+            # Add extra context to Sentry
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("resume_id", resume_id)
+                scope.set_tag("user_id", user_id)
+                scope.set_extra("algolia_index", "resume")
+                sentry_sdk.capture_exception(e)
+
+    transaction.on_commit(_deindex)
