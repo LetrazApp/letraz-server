@@ -250,11 +250,4 @@ def handle_resume_delete(sender, instance: Resume, **kwargs):
                 exc_info=True,
             )
 
-            # Add extra context to Sentry
-            with sentry_sdk.push_scope() as scope:
-                scope.set_tag("resume_id", resume_id)
-                scope.set_tag("user_id", user_id)
-                scope.set_extra("algolia_index", "resume")
-                sentry_sdk.capture_exception(e)
-
     transaction.on_commit(_deindex)
