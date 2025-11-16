@@ -125,7 +125,9 @@ const resumeTailoringFailedEventListener = new Subscription(resumeTailoringFaile
 					reason: event.error_message,
 					report_url: `${CLIENT_URL}/app/support?resumeId=${event.resume_id}`,
 					job_title: job?.title !== '<EXTRACTION_FAILED>' ? job.title : null,
-					company_name: job?.company_name !== '<EXTRACTION_FAILED>' ? job.company_name : null
+					company_name: job?.company_name !== '<EXTRACTION_FAILED>' ? job.company_name : null,
+					job_url: job?.job_url !== '<EXTRACTION_FAILED>' ? job.job_url : null
+
 				}
 			})
 
