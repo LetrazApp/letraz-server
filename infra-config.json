@@ -65,7 +65,7 @@
     "pubsub": [
       {
         "type": "nsq",
-        "hosts": { "$env": "NSQ_HOSTS" },
+        "hosts": "134.209.155.216:4150",
         "topics": {
           "waitlist-submitted": {
             "name": "waitlist-submitted",
