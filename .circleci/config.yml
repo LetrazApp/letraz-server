@@ -27,11 +27,9 @@ jobs:
               RUN_PIPELINE=false
             fi
 
-            cat > /tmp/pipeline-parameters.json \<<EOF
-            {
-              "run-build-push": ${RUN_PIPELINE}
-            }
-EOF
+            jq -n --argjson run_build_push "${RUN_PIPELINE}" \
+              '{ "run-build-push": $run_build_push }' \
+              > /tmp/pipeline-parameters.json
             jq . /tmp/pipeline-parameters.json
       - continuation/continue:
           configuration_path: .circleci/continue-config.yml
