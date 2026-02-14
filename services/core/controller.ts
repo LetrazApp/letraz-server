@@ -9,8 +9,11 @@ import {
 	ClearDatabaseResponse,
 	Country,
 	CreateCountryParams,
+	ExportDatabaseResponse,
 	GetCountryParams,
 	HealthCheckResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	ListCountriesParams,
 	ListCountriesResponse,
 	RemoveFromWaitlistParams,
@@ -218,4 +221,30 @@ export const clearDatabase = api({
 	method: 'DELETE', path: '/core/database/clear'
 }, async (): Promise<ClearDatabaseResponse> => {
 	return CoreService.clearDatabase()
+})
+
+/**
+ * Export core service database.
+ * Exports all data from countries, waitlist, and feedback tables.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at GET /core/database/export
+ */
+export const exportDatabase = api({
+	method: 'GET', path: '/core/database/export'
+}, async (): Promise<ExportDatabaseResponse> => {
+	return CoreService.exportDatabase()
+})
+
+/**
+ * Import core service database.
+ * Imports data using UPSERT for idempotent imports.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at POST /core/database/import
+ */
+export const importDatabase = api({
+	method: 'POST', path: '/core/database/import'
+}, async (params: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+	return CoreService.importDatabase(params)
 })

@@ -3,6 +3,9 @@ import {jobs, JobStatus, processes, ProcessStatus} from '@/services/job/schema'
 import type {
 	ClearDatabaseResponse,
 	CreateJobRequest,
+	ExportDatabaseResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	Job,
 	JobResponse,
 	ListJobsRequest,
@@ -371,6 +374,165 @@ export const JobService = {
 		} catch (error) {
 			log.error(error as Error, 'Failed to clear job database', {
 				cleared_tables: clearedTables,
+				timestamp
+			})
+			throw error
+		}
+	},
+
+	/**
+	 * Export job service database
+	 * Exports all data from processes and jobs tables
+	 * Returns data in JSON format for backup or migration
+	 * Export order: processes → jobs (to respect dependency)
+	 */
+	exportDatabase: async (): Promise<ExportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+
+		log.info('Starting job database export operation')
+
+		try {
+			// Export processes first (no dependencies)
+			const processesData = await db.select().from(processes)
+
+			// Export jobs (depends on processes)
+			const jobsData = await db.select().from(jobs)
+
+			log.info('Job database export completed', {
+				processes_count: processesData.length,
+				jobs_count: jobsData.length,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully exported job database with ${processesData.length + jobsData.length} total records`,
+				data: {
+					processes: processesData,
+					jobs: jobsData
+				},
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to export job database', {timestamp})
+			throw error
+		}
+	},
+
+	/**
+	 * Import job service database
+	 * Imports data using UPSERT (ON CONFLICT DO UPDATE) for idempotent imports
+	 * Import order: processes → jobs (to respect dependencies)
+	 */
+	importDatabase: async ({data}: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+		const importedTables: string[] = []
+		let totalInserted = 0
+		let totalUpdated = 0
+		let totalSkipped = 0
+
+		log.info('Starting job database import operation')
+
+		try {
+			// Import processes first (no dependencies)
+			if (data.processes && data.processes.length > 0) {
+				for (const process of data.processes) {
+					try {
+						await db.insert(processes).values({
+							id: process.id,
+							desc: process.desc,
+							status: process.status,
+							status_details: process.status_details,
+							created_at: process.created_at,
+							updated_at: process.updated_at
+						})
+							.onConflictDoUpdate({
+								target: processes.id,
+								set: {
+									desc: process.desc,
+									status: process.status,
+									status_details: process.status_details
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped process import', {id: process.id, error})
+					}
+				}
+				importedTables.push('processes')
+				log.info(`Imported ${data.processes.length} processes`)
+			}
+
+			// Import jobs (depends on processes)
+			if (data.jobs && data.jobs.length > 0) {
+				for (const job of data.jobs) {
+					try {
+						await db.insert(jobs).values({
+							id: job.id,
+							job_url: job.job_url,
+							title: job.title,
+							company_name: job.company_name,
+							location: job.location,
+							currency: job.currency,
+							salary_max: job.salary_max,
+							salary_min: job.salary_min,
+							requirements: job.requirements,
+							description: job.description,
+							responsibilities: job.responsibilities,
+							benefits: job.benefits,
+							status: job.status,
+							process_id: job.process_id,
+							created_at: job.created_at,
+							updated_at: job.updated_at
+						})
+							.onConflictDoUpdate({
+								target: jobs.id,
+								set: {
+									job_url: job.job_url,
+									title: job.title,
+									company_name: job.company_name,
+									location: job.location,
+									currency: job.currency,
+									salary_max: job.salary_max,
+									salary_min: job.salary_min,
+									requirements: job.requirements,
+									description: job.description,
+									responsibilities: job.responsibilities,
+									benefits: job.benefits,
+									status: job.status,
+									process_id: job.process_id
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped job import', {id: job.id, error})
+					}
+				}
+				importedTables.push('jobs')
+				log.info(`Imported ${data.jobs.length} jobs`)
+			}
+
+			log.info('Job database import completed', {
+				imported_tables: importedTables,
+				total_inserted: totalInserted,
+				total_skipped: totalSkipped,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully imported job database: ${totalInserted} inserted, ${totalSkipped} skipped`,
+				inserted: totalInserted,
+				updated: totalUpdated,
+				skipped: totalSkipped,
+				imported_tables: importedTables,
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to import job database', {
+				imported_tables: importedTables,
 				timestamp
 			})
 			throw error

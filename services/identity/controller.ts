@@ -1,7 +1,14 @@
 import {api, APIError} from 'encore.dev/api'
 import {getAuthData} from '~encore/auth'
 import type {AuthData} from '@/services/identity/auth'
-import type {ClearDatabaseResponse, UpdateProfileRequest, User} from '@/services/identity/interface'
+import type {
+	ClearDatabaseResponse,
+	ExportDatabaseResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
+	UpdateProfileRequest,
+	User
+} from '@/services/identity/interface'
 import {IdentityService} from '@/services/identity/service'
 
 /**
@@ -95,4 +102,30 @@ export const clearDatabase = api({
 	method: 'DELETE', path: '/identity/database/clear'
 }, async (): Promise<ClearDatabaseResponse> => {
 	return IdentityService.clearDatabase()
+})
+
+/**
+ * Export identity service database.
+ * Exports all data from users table.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at GET /identity/database/export
+ */
+export const exportDatabase = api({
+	method: 'GET', path: '/identity/database/export'
+}, async (): Promise<ExportDatabaseResponse> => {
+	return IdentityService.exportDatabase()
+})
+
+/**
+ * Import identity service database.
+ * Imports data using UPSERT for idempotent imports.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at POST /identity/database/import
+ */
+export const importDatabase = api({
+	method: 'POST', path: '/identity/database/import'
+}, async (params: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+	return IdentityService.importDatabase(params)
 })

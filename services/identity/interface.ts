@@ -103,3 +103,52 @@ export interface ClearDatabaseResponse {
 	/** Timestamp of the operation */
 	timestamp: string
 }
+
+/**
+ * Database export data structure
+ */
+export interface IdentityDatabaseExport {
+	users: User[]
+}
+
+/**
+ * Response for export database operation
+ */
+export interface ExportDatabaseResponse {
+	/** Success status */
+	success: boolean
+	/** Message describing the operation result */
+	message: string
+	/** Exported data */
+	data: IdentityDatabaseExport
+	/** Timestamp of the export */
+	timestamp: string
+}
+
+/**
+ * Request for import database operation
+ */
+export interface ImportDatabaseRequest {
+	/** Data to import */
+	data: IdentityDatabaseExport
+}
+
+/**
+ * Response for import database operation
+ */
+export interface ImportDatabaseResponse {
+	/** Success status */
+	success: boolean
+	/** Message describing the operation result */
+	message: string
+	/** Number of records inserted */
+	inserted: number
+	/** Number of records updated */
+	updated: number
+	/** Number of records skipped */
+	skipped: number
+	/** Tables that were imported */
+	imported_tables: string[]
+	/** Timestamp of the import */
+	timestamp: string
+}

@@ -5,6 +5,7 @@ import {secret} from 'encore.dev/config'
 import {convertToPublicLinkedInJobURL, isLinkedInJobURL, isLinkedInURL} from '../utils/url-detection'
 import {LLMJobParser} from './llm-parser'
 import {createGateway, generateObject} from 'ai'
+import {clampString, normalizeBigintNumber, normalizeCurrency, normalizeStringArray} from '../utils/normalize'
 
 const firecrawlApiKey = secret('FirecrawlApiKey')
 const brightDataApiKey = secret('BrightdataApiKey')
@@ -543,18 +544,18 @@ export class JobExtractor {
 	 */
 	private parseFirecrawlStructuredData(data: z.infer<typeof FirecrawlJobSchema>): JobExtractionResult {
 		// Extract data from both nested and flat structures
-		const title = data.job?.title || data.title || '<TITLE_NOT_FOUND>'
-		const company_name = data.company?.name || data.company_name || '<COMPANY_NOT_FOUND>'
-		const location = data.job?.location || data.location || undefined
-		const description = data.job?.description || data.description || undefined
-		const requirements = data.job?.requirements || data.requirements || undefined
-		const responsibilities = data.job?.responsibilities || data.responsibilities || undefined
-		const benefits = data.job?.benefits || data.benefits || undefined
+		const title = clampString(data.job?.title || data.title, 250) ?? '<TITLE_NOT_FOUND>'
+		const company_name = clampString(data.company?.name || data.company_name, 250) ?? '<COMPANY_NOT_FOUND>'
+		const location = clampString(data.job?.location || data.location, 100) ?? undefined
+		const description = clampString(data.job?.description || data.description, 3000) ?? undefined
+		const requirements = normalizeStringArray(data.job?.requirements || data.requirements) ?? undefined
+		const responsibilities = normalizeStringArray(data.job?.responsibilities || data.responsibilities) ?? undefined
+		const benefits = normalizeStringArray(data.job?.benefits || data.benefits) ?? undefined
 
 		// Handle salary from nested or flat structure
-		const currency = data.job?.salary?.currency || data.currency || undefined
-		const salary_min = data.job?.salary?.min || data.salary_min || undefined
-		const salary_max = data.job?.salary?.max || data.salary_max || undefined
+		const currency = normalizeCurrency(data.job?.salary?.currency || data.currency) ?? undefined
+		const salary_min = normalizeBigintNumber(data.job?.salary?.min ?? data.salary_min) ?? undefined
+		const salary_max = normalizeBigintNumber(data.job?.salary?.max ?? data.salary_max) ?? undefined
 
 		log.info('Parsing Firecrawl structured data', {
 			title,
@@ -617,16 +618,16 @@ export class JobExtractor {
 
 			// Combine BrightData structured fields with Claude-extracted details
 			return {
-				title: data.job_title,
-				company_name: data.company_name,
-				location: data.job_location || undefined,
-				currency: data.base_salary?.currency || undefined,
-				salary_min: data.base_salary?.min || undefined,
-				salary_max: data.base_salary?.max || undefined,
-				description: descriptionData.description,
-				requirements: descriptionData.requirements,
-				responsibilities: descriptionData.responsibilities,
-				benefits: descriptionData.benefits
+				title: clampString(data.job_title, 250) ?? '<TITLE_NOT_FOUND>',
+				company_name: clampString(data.company_name, 250) ?? '<COMPANY_NOT_FOUND>',
+				location: clampString(data.job_location, 100) ?? undefined,
+				currency: normalizeCurrency(data.base_salary?.currency) ?? undefined,
+				salary_min: normalizeBigintNumber(data.base_salary?.min) ?? undefined,
+				salary_max: normalizeBigintNumber(data.base_salary?.max) ?? undefined,
+				description: clampString(descriptionData.description, 3000) ?? undefined,
+				requirements: normalizeStringArray(descriptionData.requirements) ?? undefined,
+				responsibilities: normalizeStringArray(descriptionData.responsibilities) ?? undefined,
+				benefits: normalizeStringArray(descriptionData.benefits) ?? undefined
 			}
 		}
 

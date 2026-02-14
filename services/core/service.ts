@@ -7,6 +7,9 @@ import {
 	ClearDatabaseResponse,
 	Country,
 	CreateCountryParams,
+	ExportDatabaseResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	ListCountriesParams,
 	ListCountriesResponse,
 	LoopsContact,
@@ -636,6 +639,168 @@ export const CoreService = {
 		} catch (error) {
 			log.error(error as Error, 'Failed to clear core database', {
 				cleared_tables: clearedTables,
+				timestamp
+			})
+			throw error
+		}
+	},
+
+	/**
+	 * Export core service database
+	 * Exports all data from countries, waitlist, and feedback tables
+	 * Returns data in JSON format for backup or migration
+	 */
+	exportDatabase: async (): Promise<ExportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+
+		log.info('Starting core database export operation')
+
+		try {
+			// Export all tables
+			const countriesData = await db.select().from(countries)
+			const waitlistData = await db.select().from(waitlist)
+			const feedbackData = await db.select().from(feedbackTable)
+
+			log.info('Core database export completed', {
+				countries_count: countriesData.length,
+				waitlist_count: waitlistData.length,
+				feedback_count: feedbackData.length,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully exported core database with ${countriesData.length + waitlistData.length + feedbackData.length} total records`,
+				data: {
+					countries: countriesData,
+					waitlist: waitlistData,
+					feedback: feedbackData
+				},
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to export core database', {timestamp})
+			throw error
+		}
+	},
+
+	/**
+	 * Import core service database
+	 * Imports data using UPSERT (ON CONFLICT DO UPDATE) for idempotent imports
+	 * Import order: countries → waitlist → feedback
+	 */
+	importDatabase: async ({data}: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+		const importedTables: string[] = []
+		let totalInserted = 0
+		let totalUpdated = 0
+		let totalSkipped = 0
+
+		log.info('Starting core database import operation')
+
+		try {
+			// Import countries (dependency: none)
+			if (data.countries && data.countries.length > 0) {
+				for (const country of data.countries) {
+					try {
+						await db.insert(countries).values(country)
+							.onConflictDoUpdate({
+								target: countries.code,
+								set: {
+									name: country.name
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped country import', {code: country.code, error})
+					}
+				}
+				importedTables.push('countries')
+				log.info(`Imported ${data.countries.length} countries`)
+			}
+
+			// Import waitlist (dependency: none)
+			if (data.waitlist && data.waitlist.length > 0) {
+				for (const entry of data.waitlist) {
+					try {
+						await db.insert(waitlist).values({
+							id: entry.id,
+							email: entry.email,
+							referrer: entry.referrer,
+							waiting_number: entry.waiting_number,
+							has_access: entry.has_access,
+							created_at: entry.created_at
+						})
+							.onConflictDoUpdate({
+								target: waitlist.id,
+								set: {
+									email: entry.email,
+									referrer: entry.referrer,
+									waiting_number: entry.waiting_number,
+									has_access: entry.has_access
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped waitlist entry import', {id: entry.id, error})
+					}
+				}
+				importedTables.push('waitlist')
+				log.info(`Imported ${data.waitlist.length} waitlist entries`)
+			}
+
+			// Import feedback (dependency: none)
+			if (data.feedback && data.feedback.length > 0) {
+				for (const item of data.feedback) {
+					try {
+						await db.insert(feedbackTable).values({
+							id: item.id,
+							user_id: item.user_id,
+							title: item.title,
+							content: item.content,
+							priority: item.priority,
+							created_at: item.created_at
+						})
+							.onConflictDoUpdate({
+								target: feedbackTable.id,
+								set: {
+									user_id: item.user_id,
+									title: item.title,
+									content: item.content,
+									priority: item.priority
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped feedback import', {id: item.id, error})
+					}
+				}
+				importedTables.push('feedback')
+				log.info(`Imported ${data.feedback.length} feedback entries`)
+			}
+
+			log.info('Core database import completed', {
+				imported_tables: importedTables,
+				total_inserted: totalInserted,
+				total_skipped: totalSkipped,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully imported core database: ${totalInserted} inserted, ${totalSkipped} skipped`,
+				inserted: totalInserted,
+				updated: totalUpdated,
+				skipped: totalSkipped,
+				imported_tables: importedTables,
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to import core database', {
+				imported_tables: importedTables,
 				timestamp
 			})
 			throw error

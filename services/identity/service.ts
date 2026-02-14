@@ -1,5 +1,13 @@
 import {eq} from 'drizzle-orm'
-import type {ClearDatabaseResponse, CreateUserInput, UpdateUserInput, User} from './interface'
+import type {
+	ClearDatabaseResponse,
+	CreateUserInput,
+	ExportDatabaseResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
+	UpdateUserInput,
+	User
+} from './interface'
 import {APIError} from 'encore.dev/api'
 import {users} from '@/services/identity/schema'
 import {db} from '@/services/identity/database'
@@ -218,6 +226,138 @@ export const IdentityService = {
 		} catch (error) {
 			log.error(error as Error, 'Failed to clear identity database', {
 				cleared_tables: clearedTables,
+				timestamp
+			})
+			throw error
+		}
+	},
+
+	/**
+	 * Export identity service database
+	 * Exports all data from users table
+	 * Returns data in JSON format for backup or migration
+	 */
+	exportDatabase: async (): Promise<ExportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+
+		log.info('Starting identity database export operation')
+
+		try {
+			// Export users table
+			const usersData = await db.select().from(users)
+
+			// Format users data to match interface
+			const formattedUsers = usersData.map(IdentityHelpers.formatUserResponse)
+
+			log.info('Identity database export completed', {
+				users_count: usersData.length,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully exported identity database with ${usersData.length} total records`,
+				data: {
+					users: formattedUsers
+				},
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to export identity database', {timestamp})
+			throw error
+		}
+	},
+
+	/**
+	 * Import identity service database
+	 * Imports data using UPSERT (ON CONFLICT DO UPDATE) for idempotent imports
+	 * Import order: users (dependency: none)
+	 */
+	importDatabase: async ({data}: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+		const importedTables: string[] = []
+		let totalInserted = 0
+		let totalUpdated = 0
+		let totalSkipped = 0
+
+		log.info('Starting identity database import operation')
+
+		try {
+			// Import users (dependency: none, but references countries in core DB)
+			if (data.users && data.users.length > 0) {
+				for (const user of data.users) {
+					try {
+						await db.insert(users).values({
+							id: user.id,
+							title: user.title,
+							first_name: user.first_name,
+							last_name: user.last_name,
+							email: user.email,
+							phone: user.phone,
+							dob: user.dob ? IdentityHelpers.parseDate(user.dob) : null,
+							nationality: user.nationality,
+							address: user.address,
+							city: user.city,
+							postal: user.postal,
+							country_id: user.country_id,
+							website: user.website,
+							profile_text: user.profile_text,
+							is_active: user.is_active,
+							is_staff: user.is_staff,
+							last_login: user.last_login,
+							created_at: user.created_at,
+							updated_at: user.updated_at
+						})
+							.onConflictDoUpdate({
+								target: users.id,
+								set: {
+									title: user.title,
+									first_name: user.first_name,
+									last_name: user.last_name,
+									email: user.email,
+									phone: user.phone,
+									dob: user.dob ? IdentityHelpers.parseDate(user.dob) : null,
+									nationality: user.nationality,
+									address: user.address,
+									city: user.city,
+									postal: user.postal,
+									country_id: user.country_id,
+									website: user.website,
+									profile_text: user.profile_text,
+									is_active: user.is_active,
+									is_staff: user.is_staff,
+									last_login: user.last_login
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped user import', {id: user.id, error})
+					}
+				}
+				importedTables.push('users')
+				log.info(`Imported ${data.users.length} users`)
+			}
+
+			log.info('Identity database import completed', {
+				imported_tables: importedTables,
+				total_inserted: totalInserted,
+				total_skipped: totalSkipped,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully imported identity database: ${totalInserted} inserted, ${totalSkipped} skipped`,
+				inserted: totalInserted,
+				updated: totalUpdated,
+				skipped: totalSkipped,
+				imported_tables: importedTables,
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to import identity database', {
+				imported_tables: importedTables,
 				timestamp
 			})
 			throw error

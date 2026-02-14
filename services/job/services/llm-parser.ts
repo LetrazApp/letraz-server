@@ -2,6 +2,7 @@ import {createGateway, generateObject} from 'ai'
 import {z} from 'zod'
 import log from 'encore.dev/log'
 import {secret} from 'encore.dev/config'
+import {clampString, normalizeBigintNumber, normalizeCurrency, normalizeStringArray} from '../utils/normalize'
 
 const claudeApiKey = secret('ClaudeApiKey')
 const aiGatewayKey = secret('AiGatewayKey')
@@ -191,10 +192,16 @@ IMPORTANT CLASSIFICATION RULES:
 EXTRACTION RULES:
 - If is_job_posting is false, fill title, company_name, and other job fields with empty strings/arrays
 - If is_job_posting is true, extract all available information
-- For salary: extract any monetary values mentioned (annual, hourly, etc.)
+- For currency: return ONLY a short currency code (prefer ISO 4217 like "USD", "EUR", "INR"). Do NOT include units like "/hour", "per year", or symbols.
+- For salary: extract numeric amounts, but return whole integers only (no decimals). If the source has decimals (e.g. 14.5), round to the nearest integer.
 - Keep descriptions concise but informative (2-3 sentences max)
 - Set confidence to at least 0.7 for clear job postings, lower for ambiguous content
 - The job_url should be: ${url}
+- Output should be compatible with these storage limits:
+  - title: max 250 chars
+  - company_name: max 250 chars
+  - location: max 100 chars
+  - description: max 3000 chars
 
 CONTENT TO ANALYZE:
 ${content}`
@@ -204,17 +211,28 @@ ${content}`
 	 * Convert LLM response to our internal JobExtractionResult format
 	 */
 	private convertToJobExtractionResult(data: LLMJobExtractionResult): JobExtractionResult {
+		const title = clampString(data.title, 250) ?? '<TITLE_NOT_FOUND>'
+		const company_name = clampString(data.company_name, 250) ?? '<COMPANY_NOT_FOUND>'
+		const location = clampString(data.location, 100) ?? undefined
+		const currency = normalizeCurrency(data.salary?.currency) ?? undefined
+		const salary_min = normalizeBigintNumber(data.salary?.min) ?? undefined
+		const salary_max = normalizeBigintNumber(data.salary?.max) ?? undefined
+		const requirements = normalizeStringArray(data.requirements) ?? undefined
+		const responsibilities = normalizeStringArray(data.responsibilities) ?? undefined
+		const benefits = normalizeStringArray(data.benefits) ?? undefined
+		const description = clampString(data.description, 3000) ?? undefined
+
 		return {
-			title: data.title || '<TITLE_NOT_FOUND>',
-			company_name: data.company_name || '<COMPANY_NOT_FOUND>',
-			location: data.location || undefined,
-			currency: data.salary?.currency || undefined,
-			salary_min: data.salary?.min || undefined,
-			salary_max: data.salary?.max || undefined,
-			requirements: data.requirements || undefined,
-			description: data.description || undefined,
-			responsibilities: data.responsibilities || undefined,
-			benefits: data.benefits || undefined
+			title,
+			company_name,
+			location,
+			currency,
+			salary_min,
+			salary_max,
+			requirements,
+			description,
+			responsibilities,
+			benefits
 		}
 	}
 }

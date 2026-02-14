@@ -783,3 +783,78 @@ export interface ClearDatabaseResponse {
 	/** Timestamp of the operation */
 	timestamp: string
 }
+
+/**
+ * Skill Alias for export/import
+ */
+export interface SkillAlias {
+	skill_id: string
+	alias_id: string
+}
+
+/**
+ * Project Skill for export/import
+ */
+export interface ProjectSkill {
+	project_id: string
+	skill_id: string
+}
+
+/**
+ * Database export data structure
+ */
+export interface ResumeDatabaseExport {
+	resume_processes: ResumeProcess[]
+	skills: Skill[]
+	skill_aliases: SkillAlias[]
+	resumes: Resume[]
+	resume_sections: ResumeSection[]
+	educations: Education[]
+	experiences: Experience[]
+	projects: Project[]
+	project_skills: ProjectSkill[]
+	certifications: Certification[]
+	proficiencies: Proficiency[]
+}
+
+/**
+ * Response for export database operation
+ */
+export interface ExportDatabaseResponse {
+	/** Success status */
+	success: boolean
+	/** Message describing the operation result */
+	message: string
+	/** Exported data */
+	data: ResumeDatabaseExport
+	/** Timestamp of the export */
+	timestamp: string
+}
+
+/**
+ * Request for import database operation
+ */
+export interface ImportDatabaseRequest {
+	/** Data to import */
+	data: ResumeDatabaseExport
+}
+
+/**
+ * Response for import database operation
+ */
+export interface ImportDatabaseResponse {
+	/** Success status */
+	success: boolean
+	/** Message describing the operation result */
+	message: string
+	/** Number of records inserted */
+	inserted: number
+	/** Number of records updated */
+	updated: number
+	/** Number of records skipped */
+	skipped: number
+	/** Tables that were imported */
+	imported_tables: string[]
+	/** Timestamp of the import */
+	timestamp: string
+}

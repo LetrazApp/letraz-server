@@ -33,9 +33,12 @@ import {SkillHelpers} from '@/services/resume/services/skill.service'
 import {
 	ClearDatabaseResponse,
 	DeleteResumeParams,
+	ExportDatabaseResponse,
 	ExportResumeParams,
 	ExportResumeResponse,
 	GetResumeParams,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	ListResumesParams,
 	RearrangeSectionsRequest,
 	ResumeMinimal,
@@ -1244,6 +1247,387 @@ export const ResumeService = {
 		} catch (error) {
 			log.error(error as Error, 'Failed to clear resume database', {
 				cleared_tables: clearedTables,
+				timestamp
+			})
+			throw error
+		}
+	},
+
+	/**
+	 * Export resume service database
+	 * Exports all data from all resume-related tables
+	 * Returns data in JSON format for backup or migration
+	 * Export order follows dependencies: resume_processes, skills, skill_aliases, resumes, resume_sections, etc.
+	 */
+	exportDatabase: async (): Promise<ExportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+
+		log.info('Starting resume database export operation')
+
+		try {
+			// Export all tables
+			const resumeProcessesData = await db.select().from(resumeProcesses)
+			const skillsData = await db.select().from(skills)
+			const skillAliasesData = await db.select().from(skillAliases)
+			const resumesData = await db.select().from(resumes)
+			const resumeSectionsData = await db.select().from(resumeSections)
+			const educationsData = await db.select().from(educations)
+			const experiencesData = await db.select().from(experiences)
+			const projectsData = await db.select().from(projects)
+			const projectSkillsData = await db.select().from(projectSkills)
+			const certificationsData = await db.select().from(certifications)
+			const proficienciesData = await db.select().from(proficiencies)
+
+			const totalRecords = resumeProcessesData.length + skillsData.length + skillAliasesData.length +
+				resumesData.length + resumeSectionsData.length + educationsData.length + experiencesData.length +
+				projectsData.length + projectSkillsData.length + certificationsData.length + proficienciesData.length
+
+			log.info('Resume database export completed', {
+				resume_processes_count: resumeProcessesData.length,
+				skills_count: skillsData.length,
+				skill_aliases_count: skillAliasesData.length,
+				resumes_count: resumesData.length,
+				resume_sections_count: resumeSectionsData.length,
+				educations_count: educationsData.length,
+				experiences_count: experiencesData.length,
+				projects_count: projectsData.length,
+				project_skills_count: projectSkillsData.length,
+				certifications_count: certificationsData.length,
+				proficiencies_count: proficienciesData.length,
+				total_records: totalRecords,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully exported resume database with ${totalRecords} total records`,
+				data: {
+					resume_processes: resumeProcessesData,
+					skills: skillsData,
+					skill_aliases: skillAliasesData,
+					resumes: resumesData,
+					resume_sections: resumeSectionsData,
+					educations: educationsData,
+					experiences: experiencesData,
+					projects: projectsData,
+					project_skills: projectSkillsData,
+					certifications: certificationsData,
+					proficiencies: proficienciesData
+				},
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to export resume database', {timestamp})
+			throw error
+		}
+	},
+
+	/**
+	 * Import resume service database
+	 * Imports data using UPSERT (ON CONFLICT DO UPDATE) for idempotent imports
+	 * Import order respects dependencies: resume_processes → skills → skill_aliases → resumes → resume_sections → educations/experiences/projects → project_skills → certifications → proficiencies
+	 */
+	importDatabase: async ({data}: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+		const timestamp = new Date().toISOString()
+		const importedTables: string[] = []
+		let totalInserted = 0
+		let totalUpdated = 0
+		let totalSkipped = 0
+
+		log.info('Starting resume database import operation')
+
+		try {
+			// 1. Import resume_processes (no dependencies)
+			if (data.resume_processes && data.resume_processes.length > 0) {
+				for (const process of data.resume_processes) {
+					try {
+						await db.insert(resumeProcesses).values(process)
+							.onConflictDoUpdate({
+								target: resumeProcesses.id,
+								set: {
+									desc: process.desc,
+									status: process.status,
+									status_details: process.status_details
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped resume_process import', {id: process.id, error})
+					}
+				}
+				importedTables.push('resume_processes')
+				log.info(`Imported ${data.resume_processes.length} resume_processes`)
+			}
+
+			// 2. Import skills (no dependencies)
+			if (data.skills && data.skills.length > 0) {
+				for (const skill of data.skills) {
+					try {
+						await db.insert(skills).values(skill)
+							.onConflictDoUpdate({
+								target: [skills.category, skills.name],
+								set: {
+									preferred: skill.preferred
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped skill import', {id: skill.id, error})
+					}
+				}
+				importedTables.push('skills')
+				log.info(`Imported ${data.skills.length} skills`)
+			}
+
+			// 3. Import skill_aliases (depends on skills)
+			if (data.skill_aliases && data.skill_aliases.length > 0) {
+				for (const alias of data.skill_aliases) {
+					try {
+						await db.insert(skillAliases).values(alias)
+							.onConflictDoNothing()
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped skill_alias import', {skill_id: alias.skill_id, alias_id: alias.alias_id, error})
+					}
+				}
+				importedTables.push('skill_aliases')
+				log.info(`Imported ${data.skill_aliases.length} skill_aliases`)
+			}
+
+			// 4. Import resumes (depends on resume_processes)
+			if (data.resumes && data.resumes.length > 0) {
+				for (const resume of data.resumes) {
+					try {
+						await db.insert(resumes).values(resume)
+							.onConflictDoUpdate({
+								target: resumes.id,
+								set: {
+									user_id: resume.user_id,
+									job_id: resume.job_id,
+									base: resume.base,
+									status: resume.status,
+									thumbnail: resume.thumbnail,
+									process_id: resume.process_id
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped resume import', {id: resume.id, error})
+					}
+				}
+				importedTables.push('resumes')
+				log.info(`Imported ${data.resumes.length} resumes`)
+			}
+
+			// 5. Import resume_sections (depends on resumes)
+			if (data.resume_sections && data.resume_sections.length > 0) {
+				for (const section of data.resume_sections) {
+					try {
+						await db.insert(resumeSections).values(section)
+							.onConflictDoUpdate({
+								target: resumeSections.id,
+								set: {
+									resume_id: section.resume_id,
+									index: section.index,
+									type: section.type
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped resume_section import', {id: section.id, error})
+					}
+				}
+				importedTables.push('resume_sections')
+				log.info(`Imported ${data.resume_sections.length} resume_sections`)
+			}
+
+			// 6. Import educations (depends on resume_sections)
+			if (data.educations && data.educations.length > 0) {
+				for (const education of data.educations) {
+					try {
+						await db.insert(educations).values(education)
+							.onConflictDoUpdate({
+								target: educations.id,
+								set: {
+									user_id: education.user_id,
+									resume_section_id: education.resume_section_id,
+									institution_name: education.institution_name,
+									field_of_study: education.field_of_study,
+									degree: education.degree,
+									country_code: education.country_code,
+									started_from_month: education.started_from_month,
+									started_from_year: education.started_from_year,
+									finished_at_month: education.finished_at_month,
+									finished_at_year: education.finished_at_year,
+									current: education.current,
+									description: education.description
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped education import', {id: education.id, error})
+					}
+				}
+				importedTables.push('educations')
+				log.info(`Imported ${data.educations.length} educations`)
+			}
+
+			// 7. Import experiences (depends on resume_sections)
+			if (data.experiences && data.experiences.length > 0) {
+				for (const experience of data.experiences) {
+					try {
+						await db.insert(experiences).values(experience)
+							.onConflictDoUpdate({
+								target: experiences.id,
+								set: {
+									user_id: experience.user_id,
+									resume_section_id: experience.resume_section_id,
+									company_name: experience.company_name,
+									job_title: experience.job_title,
+									employment_type: experience.employment_type,
+									city: experience.city,
+									country_code: experience.country_code,
+									started_from_month: experience.started_from_month,
+									started_from_year: experience.started_from_year,
+									finished_at_month: experience.finished_at_month,
+									finished_at_year: experience.finished_at_year,
+									current: experience.current,
+									description: experience.description
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped experience import', {id: experience.id, error})
+					}
+				}
+				importedTables.push('experiences')
+				log.info(`Imported ${data.experiences.length} experiences`)
+			}
+
+			// 8. Import projects (depends on resume_sections)
+			if (data.projects && data.projects.length > 0) {
+				for (const project of data.projects) {
+					try {
+						await db.insert(projects).values(project)
+							.onConflictDoUpdate({
+								target: projects.id,
+								set: {
+									user_id: project.user_id,
+									resume_section_id: project.resume_section_id,
+									name: project.name,
+									category: project.category,
+									description: project.description,
+									role: project.role,
+									github_url: project.github_url,
+									live_url: project.live_url,
+									started_from_month: project.started_from_month,
+									started_from_year: project.started_from_year,
+									finished_at_month: project.finished_at_month,
+									finished_at_year: project.finished_at_year,
+									current: project.current
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped project import', {id: project.id, error})
+					}
+				}
+				importedTables.push('projects')
+				log.info(`Imported ${data.projects.length} projects`)
+			}
+
+			// 9. Import project_skills (depends on projects and skills)
+			if (data.project_skills && data.project_skills.length > 0) {
+				for (const projectSkill of data.project_skills) {
+					try {
+						await db.insert(projectSkills).values(projectSkill)
+							.onConflictDoNothing()
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped project_skill import', {project_id: projectSkill.project_id, skill_id: projectSkill.skill_id, error})
+					}
+				}
+				importedTables.push('project_skills')
+				log.info(`Imported ${data.project_skills.length} project_skills`)
+			}
+
+			// 10. Import certifications (depends on resume_sections)
+			if (data.certifications && data.certifications.length > 0) {
+				for (const certification of data.certifications) {
+					try {
+						await db.insert(certifications).values(certification)
+							.onConflictDoUpdate({
+								target: certifications.id,
+								set: {
+									user_id: certification.user_id,
+									resume_section_id: certification.resume_section_id,
+									name: certification.name,
+									issuing_organization: certification.issuing_organization,
+									issue_date: certification.issue_date,
+									credential_url: certification.credential_url
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped certification import', {id: certification.id, error})
+					}
+				}
+				importedTables.push('certifications')
+				log.info(`Imported ${data.certifications.length} certifications`)
+			}
+
+			// 11. Import proficiencies (depends on skills and resume_sections)
+			if (data.proficiencies && data.proficiencies.length > 0) {
+				for (const proficiency of data.proficiencies) {
+					try {
+						await db.insert(proficiencies).values(proficiency)
+							.onConflictDoUpdate({
+								target: proficiencies.id,
+								set: {
+									skill_id: proficiency.skill_id,
+									resume_section_id: proficiency.resume_section_id,
+									level: proficiency.level
+								}
+							})
+						totalInserted++
+					} catch (error) {
+						totalSkipped++
+						log.warn('Skipped proficiency import', {id: proficiency.id, error})
+					}
+				}
+				importedTables.push('proficiencies')
+				log.info(`Imported ${data.proficiencies.length} proficiencies`)
+			}
+
+			log.info('Resume database import completed', {
+				imported_tables: importedTables,
+				total_inserted: totalInserted,
+				total_skipped: totalSkipped,
+				timestamp
+			})
+
+			return {
+				success: true,
+				message: `Successfully imported resume database: ${totalInserted} inserted, ${totalSkipped} skipped`,
+				inserted: totalInserted,
+				updated: totalUpdated,
+				skipped: totalSkipped,
+				imported_tables: importedTables,
+				timestamp
+			}
+		} catch (error) {
+			log.error(error as Error, 'Failed to import resume database', {
+				imported_tables: importedTables,
 				timestamp
 			})
 			throw error

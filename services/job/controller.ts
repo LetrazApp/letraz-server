@@ -5,6 +5,9 @@ import type {
 	CreateJobRequest,
 	DeleteJobRequest,
 	DeleteJobResponse,
+	ExportDatabaseResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	JobResponse,
 	ListJobsRequest,
 	ListJobsResponse,
@@ -113,4 +116,30 @@ export const clearDatabase = api({
 	method: 'DELETE', path: '/job/database/clear'
 }, async (): Promise<ClearDatabaseResponse> => {
 	return JobService.clearDatabase()
+})
+
+/**
+ * Export job service database.
+ * Exports all data from processes and jobs tables.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at GET /job/database/export
+ */
+export const exportDatabase = api({
+	method: 'GET', path: '/job/database/export'
+}, async (): Promise<ExportDatabaseResponse> => {
+	return JobService.exportDatabase()
+})
+
+/**
+ * Import job service database.
+ * Imports data using UPSERT for idempotent imports.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at POST /job/database/import
+ */
+export const importDatabase = api({
+	method: 'POST', path: '/job/database/import'
+}, async (params: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+	return JobService.importDatabase(params)
 })

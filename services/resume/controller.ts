@@ -18,10 +18,13 @@ import type {
 	ExperienceResponse,
 	ExperienceUpdateRequest,
 	ExperienceWithIdParams,
+	ExportDatabaseResponse,
 	ExportResumeParams,
 	ExportResumeResponse,
 	GetResumeParams,
 	GlobalSkillCategoriesResponse,
+	ImportDatabaseRequest,
+	ImportDatabaseResponse,
 	ListResumesParams,
 	ProjectCreateRequest,
 	ProjectPathParams,
@@ -555,4 +558,30 @@ export const clearDatabase = api({
 	method: 'DELETE', path: '/resume/database/clear'
 }, async (): Promise<ClearDatabaseResponse> => {
 	return ResumeService.clearDatabase()
+})
+
+/**
+ * Export resume service database.
+ * Exports all data from all resume-related tables.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at GET /resume/database/export
+ */
+export const exportDatabase = api({
+	method: 'GET', path: '/resume/database/export'
+}, async (): Promise<ExportDatabaseResponse> => {
+	return ResumeService.exportDatabase()
+})
+
+/**
+ * Import resume service database.
+ * Imports data using UPSERT for idempotent imports.
+ *
+ * Internal endpoint for use by admin service.
+ * Accessible at POST /resume/database/import
+ */
+export const importDatabase = api({
+	method: 'POST', path: '/resume/database/import'
+}, async (params: ImportDatabaseRequest): Promise<ImportDatabaseResponse> => {
+	return ResumeService.importDatabase(params)
 })

@@ -5,6 +5,7 @@ import {db} from '@/services/job/database'
 import {jobs, JobStatus, processes, ProcessStatus} from '@/services/job/schema'
 import {eq} from 'drizzle-orm'
 import {JobExtractor} from './services/job-extractor'
+import {clampString, normalizeBigintNumber, normalizeCurrency, normalizeStringArray} from './utils/normalize'
 
 const jobScrapeTriggeredEventListener = new Subscription(jobScrapeTriggered, 'extract-job-details', {
 	handler: async (event) => {
@@ -45,16 +46,23 @@ const jobScrapeTriggeredEventListener = new Subscription(jobScrapeTriggered, 'ex
 
 			// Prepare job data for database update
 			const jobData = {
-				title: extractedJobData.title,
-				company_name: extractedJobData.company_name,
-				location: extractedJobData.location || null,
-				currency: extractedJobData.currency || null,
-				salary_min: extractedJobData.salary_min || null,
-				salary_max: extractedJobData.salary_max || null,
-				requirements: extractedJobData.requirements || [],
-				description: extractedJobData.description || null,
-				responsibilities: extractedJobData.responsibilities || [],
-				benefits: extractedJobData.benefits || [],
+				// Clamp strings to DB column lengths to avoid PG errors.
+				title: clampString(extractedJobData.title, 250) ?? '<TITLE_NOT_FOUND>',
+				company_name: clampString(extractedJobData.company_name, 250) ?? '<COMPANY_NOT_FOUND>',
+				location: clampString(extractedJobData.location, 100),
+
+				// `currency` is varchar(5). Strip units like "/hour".
+				currency: normalizeCurrency(extractedJobData.currency),
+
+				// `salary_*` are bigint; round decimals to integers.
+				salary_min: normalizeBigintNumber(extractedJobData.salary_min),
+				salary_max: normalizeBigintNumber(extractedJobData.salary_max),
+
+				// JSONB arrays: keep as arrays (never undefined).
+				requirements: normalizeStringArray(extractedJobData.requirements) ?? [],
+				description: clampString(extractedJobData.description, 3000),
+				responsibilities: normalizeStringArray(extractedJobData.responsibilities) ?? [],
+				benefits: normalizeStringArray(extractedJobData.benefits) ?? [],
 				status: JobStatus.Success
 			}
 
