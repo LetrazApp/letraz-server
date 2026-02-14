@@ -1,0 +1,195 @@
+{
+    "$schema": "https://encore.dev/schemas/infra.schema.json",
+    "metadata": {
+      "app_id": "letraz-server",
+      "env_name": "production",
+      "env_type": "production",
+      "cloud": "digitalocean",
+      "base_url": "https://api.letraz.app"
+    },
+    "secrets": {
+      "AdminApiKey":           { "$env": "ADMIN_API_KEY" },
+      "AiGatewayKey":          { "$env": "AI_GATEWAY_KEY" },
+      "AlgoliaApiKey":         { "$env": "ALGOLIA_API_KEY" },
+      "AlgoliaAppId":          { "$env": "ALGOLIA_APP_ID" },
+      "BrightdataApiKey":      { "$env": "BRIGHTDATA_API_KEY" },
+      "BrightdataDatasetId":   { "$env": "BRIGHTDATA_DATASET_ID" },
+      "ClaudeApiKey":          { "$env": "CLAUDE_API_KEY" },
+      "ClerkFrontEndApiUrl":   { "$env": "CLERK_FRONT_END_API_URL" },
+      "ClerkSecretKey":        { "$env": "CLERK_SECRET_KEY" },
+      "ClientUrl":             { "$env": "CLIENT_URL" },
+      "FirecrawlApiKey":       { "$env": "FIRECRAWL_API_KEY" },
+      "FreshdeskApiKey":       { "$env": "FRESHDESK_API_KEY" },
+      "FreshdeskDomain":       { "$env": "FRESHDESK_DOMAIN" },
+      "KnockApiKey":           { "$env": "KNOCK_API_KEY" },
+      "LinearApiKey":          { "$env": "LINEAR_API_KEY" },
+      "LinearTeamId":          { "$env": "LINEAR_TEAM_ID" },
+      "LoopsApiKey":           { "$env": "LOOPS_API_KEY" },
+      "PosthogApiKey":         { "$env": "POSTHOG_API_KEY" },
+      "PosthogHost":           { "$env": "POSTHOG_HOST" },
+      "PosthogManagementKey":  { "$env": "POSTHOG_MANAGEMENT_KEY" },
+      "PosthogProjectId":      { "$env": "POSTHOG_PROJECT_ID" },
+      "ResumePreviewToken":    { "$env": "RESUME_PREVIEW_TOKEN" },
+      "ResumePreviewUrl":      { "$env": "RESUME_PREVIEW_URL" },
+      "SentryDSN":             { "$env": "SENTRY_DSN" },
+      "UtilServiceEndpoint":   { "$env": "UTIL_SERVICE_ENDPOINT" }
+    },
+  
+    "sql_servers": [
+      {
+        "host": "ep-ancient-glade-a1zvq17l-pooler.ap-southeast-1.aws.neon.tech:5432",
+        "tls_config": {
+          "disabled": false
+        },
+        "databases": {
+          "core": {
+            "username": "neondb_owner",
+            "password": { "$env": "DB_PASSWORD" }
+          },
+          "identity": {
+            "username": "neondb_owner",
+            "password": { "$env": "DB_PASSWORD" }
+          },
+          "job": {
+            "username": "neondb_owner",
+            "password": { "$env": "DB_PASSWORD" }
+          },
+          "resume": {
+            "username": "neondb_owner",
+            "password": { "$env": "DB_PASSWORD" }
+          }
+        }
+      }
+    ],
+  
+    "pubsub": [
+      {
+        "type": "nsq",
+        "hosts": "134.209.155.216:4150",
+        "topics": {
+          "waitlist-submitted": {
+            "name": "waitlist-submitted",
+            "subscriptions": {
+              "track-waitlist-submitted": { "name": "track-waitlist-submitted" },
+              "add-user-to-knock-from-waitlist": { "name": "add-user-to-knock-from-waitlist" }
+            }
+          },
+          "waitlist-access-granted": {
+            "name": "waitlist-access-granted",
+            "subscriptions": {
+              "trigger-welcome-flow": { "name": "trigger-welcome-flow" }
+            }
+          },
+          "waitlist-loops-sync-triggered": {
+            "name": "waitlist-loops-sync-triggered",
+            "subscriptions": {
+              "sync-waitlist-to-loops-worker": { "name": "sync-waitlist-to-loops-worker" }
+            }
+          },
+          "user-feedback-submitted": {
+            "name": "user-feedback-submitted",
+            "subscriptions": {
+              "process-user-feedback": { "name": "process-user-feedback" }
+            }
+          },
+          "user-created": {
+            "name": "user-created",
+            "subscriptions": {
+              "grant-waitlist-access": { "name": "grant-waitlist-access" },
+              "add-user-to-knock-from-signup": { "name": "add-user-to-knock-from-signup" },
+              "create-base-resume": { "name": "create-base-resume" }
+            }
+          },
+          "job-scrape-triggered": {
+            "name": "job-scrape-triggered",
+            "subscriptions": {
+              "extract-job-details": { "name": "extract-job-details" }
+            }
+          },
+          "job-scrape-failed": {
+            "name": "job-scrape-failed",
+            "subscriptions": {
+              "mark-resumes-failed": { "name": "mark-resumes-failed" }
+            }
+          },
+          "job-scrape-success": {
+            "name": "job-scrape-success",
+            "subscriptions": {
+              "trigger-resume-tailoring": { "name": "trigger-resume-tailoring" }
+            }
+          },
+          "resume-tailoring-triggered": {
+            "name": "resume-tailoring-triggered",
+            "subscriptions": {
+              "process-resume-tailoring": { "name": "process-resume-tailoring" }
+            }
+          },
+          "resume-tailoring-failed": {
+            "name": "resume-tailoring-failed",
+            "subscriptions": {
+              "track-resume-tailoring-failed": { "name": "track-resume-tailoring-failed" },
+              "notify-resume-tailoring-failed": { "name": "notify-resume-tailoring-failed" }
+            }
+          },
+          "resume-tailoring-success": {
+            "name": "resume-tailoring-success",
+            "subscriptions": {
+              "track-resume-tailoring-success": { "name": "track-resume-tailoring-success" },
+              "notify-resume-tailoring-success": { "name": "notify-resume-tailoring-success" }
+            }
+          },
+          "resume-updated": {
+            "name": "resume-updated",
+            "subscriptions": {
+              "track-resume-updates": { "name": "track-resume-updates" },
+              "thumbnail-evaluation": { "name": "thumbnail-evaluation" },
+              "index-resume-in-algolia": { "name": "index-resume-in-algolia" }
+            }
+          },
+          "thumbnail-generation-triggered": {
+            "name": "thumbnail-generation-triggered",
+            "subscriptions": {
+              "generate-thumbnail": { "name": "generate-thumbnail" }
+            }
+          },
+          "resume-export-success": {
+            "name": "resume-export-success",
+            "subscriptions": {
+              "track-resume-export-success": { "name": "track-resume-export-success" }
+            }
+          },
+          "resume-export-failed": {
+            "name": "resume-export-failed",
+            "subscriptions": {
+              "track-resume-export-failed": { "name": "track-resume-export-failed" }
+            }
+          },
+          "user-deleted": {
+            "name": "user-deleted",
+            "subscriptions": {
+              "delete-user-identity": { "name": "delete-user-identity" },
+              "trigger-user-deletion-flow": { "name": "trigger-user-deletion-flow" },
+              "delete-user-resumes": { "name": "delete-user-resumes" }
+            }
+          }
+        }
+      }
+    ],
+  
+    "object_storage": [
+      {
+        "type": "s3",
+        "endpoint": "https://sgp1.digitaloceanspaces.com",
+        "region": "sgp1",
+        "access_key_id":     "DO009WG2BCK6V44PQU2H",
+        "secret_access_key": { "$env": "DO_SPACES_SECRET_KEY" },
+        "force_path_style": true,
+        "buckets": {
+          "resume-thumbnails": {
+            "name": "letraz-thumbnails",
+            "public_base_url": "https://letraz-thumbnails.sgp1.digitaloceanspaces.com"
+          }
+        }
+      }
+    ]
+  }
