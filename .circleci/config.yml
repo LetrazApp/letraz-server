@@ -1,0 +1,44 @@
+setup: true
+
+version: 2.1
+
+orbs:
+  continuation: circleci/continuation@1.0.0
+
+jobs:
+  setup:
+    docker:
+      - image: cimg/base:2024.02
+    steps:
+      - checkout
+      - run:
+          name: Install required tools
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y jq curl
+      - run:
+          name: Prepare pipeline parameters
+          command: |
+            echo "branch=$CIRCLE_BRANCH sha=$CIRCLE_SHA1"
+
+            if [ "$CIRCLE_BRANCH" = "main" ]; then
+              RUN_PIPELINE=true
+            else
+              RUN_PIPELINE=false
+            fi
+
+            cat > /tmp/pipeline-parameters.json \<<EOF
+            {
+              "run-build-push": ${RUN_PIPELINE}
+            }
+EOF
+            jq . /tmp/pipeline-parameters.json
+      - continuation/continue:
+          configuration_path: .circleci/continue-config.yml
+          parameters: /tmp/pipeline-parameters.json
+
+workflows:
+  setup-workflow:
+    jobs:
+      - setup
+

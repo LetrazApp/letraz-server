@@ -65,7 +65,7 @@
     "pubsub": [
       {
         "type": "nsq",
-        "hosts": "134.209.155.216:4150",
+        "hosts": { "$env": "NSQ_HOSTS" },
         "topics": {
           "waitlist-submitted": {
             "name": "waitlist-submitted",
@@ -181,7 +181,7 @@
         "type": "s3",
         "endpoint": "https://sgp1.digitaloceanspaces.com",
         "region": "sgp1",
-        "access_key_id":     "DO009WG2BCK6V44PQU2H",
+        "access_key_id":     { "$env": "DO_SPACES_ACCESS_KEY" },
         "secret_access_key": { "$env": "DO_SPACES_SECRET_KEY" },
         "force_path_style": true,
         "buckets": {

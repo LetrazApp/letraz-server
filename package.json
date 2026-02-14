@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "encore run",
     "migrate:prod": "node ./scripts/migrate.mjs --config infra-config.json",
+    "ci:build-and-push:docr:amd64": "bash ./scripts/ci/build-and-push-docr-amd64.sh",
     "lint": "eslint",
     "lint:fix": "eslint --fix"
   },

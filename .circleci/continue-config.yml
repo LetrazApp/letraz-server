@@ -1,0 +1,44 @@
+version: 2.1
+
+parameters:
+  run-build-push:
+    type: boolean
+    default: false
+
+jobs:
+  build-and-push-amd64:
+    machine:
+      image: ubuntu-2204:2024.01.1
+    resource_class: medium
+    steps:
+      - checkout
+      - run:
+          name: Install Node.js 20.x
+          command: |
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+            node -v
+            npm -v
+      - run:
+          name: Install dependencies
+          command: |
+            npm ci
+      - run:
+          name: Install Encore CLI
+          command: |
+            curl -L https://encore.dev/install.sh | bash
+            echo 'export PATH="$PATH:$HOME/.encore/bin"' >> "$BASH_ENV"
+            source "$BASH_ENV"
+            encore version
+      - run:
+          name: Build and push amd64 image to DOCR (latest)
+          command: |
+            chmod +x ./scripts/ci/build-and-push-docr-amd64.sh
+            ./scripts/ci/build-and-push-docr-amd64.sh
+
+workflows:
+  build-and-push:
+    when: << pipeline.parameters.run-build-push >>
+    jobs:
+      - build-and-push-amd64
+
