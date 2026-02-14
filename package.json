@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "encore run",
+    "migrate:prod": "node ./scripts/migrate.mjs --config infra-config.json",
     "lint": "eslint",
     "lint:fix": "eslint --fix"
   },
